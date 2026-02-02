@@ -24,9 +24,9 @@ class DiscordBot extends Client {
     login_attempts = 0;
     login_timestamp = 0;
     statusMessages = [
-        { name: 'Status 1', type: 4 },
-        { name: 'Status 2', type: 4 },
-        { name: 'Status 3', type: 4 }
+        { name: 'The Echo Beckons', type: 4 },
+        { name: 'The Echo Nurtures', type: 4 },
+        { name: 'The Echoe Watches', type: 4 }
     ];
 
     commands_handler = new CommandsHandler(this);
@@ -48,7 +48,7 @@ class DiscordBot extends Client {
                 activities: [{
                     name: 'keep this empty',
                     type: 4,
-                    state: 'DiscordJS-V14-Bot-Template v3'
+                    state: 'The Echo Stirs'
                 }]
             }
         });
