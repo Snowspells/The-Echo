@@ -66,7 +66,7 @@ class DiscordBot extends Client {
     }
 
     connect = async () => {
-        warn(`Attempting to connect to the Discord bot... (${this.login_attempts + 1})`);
+        warn(`Attempting to connect to Discord... (${this.login_attempts + 1})`);
 
         this.login_timestamp = Date.now();
 
@@ -81,7 +81,7 @@ class DiscordBot extends Client {
             await this.commands_handler.registerApplicationCommands(config.development);
             success('Successfully registered application commands. For specific guild? ' + (config.development.enabled ? 'Yes' : 'No'));
         } catch (err) {
-            error('Failed to connect to the Discord bot, retrying...');
+            error('Failed to connect to Discord, retrying...');
             error(err);
             this.login_attempts++;
             setTimeout(this.connect, 5000);
