@@ -5,7 +5,7 @@ const ApplicationCommand = require("../../structure/ApplicationCommand");
 module.exports = new ApplicationCommand({
     command: {
         name: 'link',
-        description: 'Links Discord ID to AGID',
+        description: 'Links Discord UID to AGID',
         type: 1,
         options: []
     },
