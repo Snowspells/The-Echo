@@ -2,6 +2,10 @@ const { ChatInputCommandInteraction } = require("discord.js");
 const DiscordBot = require("../../client/DiscordBot");
 const ApplicationCommand = require("../../structure/ApplicationCommand");
 
+const { QuickYAML } = require('quick-yaml.db');
+const db = new QuickYAML('./database.yaml');
+
+
 module.exports = new ApplicationCommand({
     command: {
         name: 'link',
@@ -18,6 +22,8 @@ module.exports = new ApplicationCommand({
      * @param {ChatInputCommandInteraction} interaction 
      */
     run: async (client, interaction) => {
+        db.set('EID', { name: message.user.id });
+
         await interaction.reply({
             content: '**Test Complete! (no under-the-hood code was run)**'
         });
