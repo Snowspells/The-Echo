@@ -16,13 +16,15 @@ module.exports = new ApplicationCommand({
     options: {
         cooldown: 5000
     },
+    
     /**
      * 
      * @param {DiscordBot} client 
      * @param {ChatInputCommandInteraction} interaction 
      */
     run: async (client, interaction) => {
-        db.set('EID', { name: message.user.id });
+        
+        db.set('EID: ' + message.user.id, { DID: message.user.id, AGID:'' }),
 
         await interaction.reply({
             content: '**Test Complete! (no under-the-hood code was run)**'
