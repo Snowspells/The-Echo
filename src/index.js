@@ -9,5 +9,6 @@ module.exports = client;
 
 client.connect();
 
-process.on('unhandledRejection', console.error);
-process.on('uncaughtException', console.error);
+const { error } = require('./utils/Console');
+process.on('unhandledRejection', (err) => error('Unhandled Rejection', err));
+process.on('uncaughtException', (err) => error('Uncaught Exception', err));

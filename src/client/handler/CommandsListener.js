@@ -19,8 +19,9 @@ class CommandsListener {
 
             let prefix = config.commands.prefix;
 
-            if (client.database.has('prefix-' + message.guild.id)) {
-                prefix = client.database.get('prefix-' + message.guild.id);
+            const guildPrefix = client.database.getGuildPrefix(message.guild.id);
+            if (guildPrefix) {
+                prefix = guildPrefix;
             }
 
             if (!message.content.startsWith(prefix)) return;

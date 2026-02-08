@@ -1,12 +1,10 @@
-const { ChatInputCommandInteraction } = require("discord.js");
-const DiscordBot = require("../../client/DiscordBot");
+﻿const { ChatInputCommandInteraction, MessageFlags } = require("discord.js");
 const ApplicationCommand = require("../../structure/ApplicationCommand");
-const { QuickYAML } = require("quick-yaml.db");
 
 module.exports = new ApplicationCommand({
     command: {
         name: 'link',
-        description: "Links player's Discord UUID to AGID (WIP)",
+        description: "Links player's Discord ID to the database (testing)",
         type: 1,
         options: []
     },
@@ -15,28 +13,36 @@ module.exports = new ApplicationCommand({
     },
 
     /**
-     * @param {DiscordBot} client
+     * @param {import("../../client/DiscordBot")} client
      * @param {ChatInputCommandInteraction} interaction
-/     */
+     */
     run: async (client, interaction) => {
+        const { info, error } = require('../../utils/Console');
+        try {
+            const discordId = interaction.user.id;
+            const dummyAgid = `AGID-${Date.now()}`;
 
-        const discordId = interaction.user.id;
-        
-        Model = [
-                { variable: 'DID', type: string },
-                { variable: 'AGID', type: string },
-                { variable: 'Marks', type: number },
-                { variable: 'Inventory', type: string[''] }
-                
-            ];
-            
-        const db = new QuickYAML<Model>(DiscordBot.config.database);
-        
-        
+            if (client.database.userExists(discordId)) {
+                await interaction.reply({
+                    content: 'You are already linked. Use an admin command to overwrite.',
+                    flags: MessageFlags.Ephemeral
+                });
 
-        await interaction.reply({
-            content: `Created test DB entry for ${discordId}`,
-            ephemeral: true
-        });
+                return;
+            }
+
+            client.database.createUser(discordId, dummyAgid, 0, []);
+            info(`New user linked: DID=${discordId} AGID=${dummyAgid}`);
+
+            await interaction.reply({
+                content: `Successfully created database entry for <@${discordId}> with dummy AGID: \`${dummyAgid}\`.`,
+                flags: MessageFlags.Ephemeral
+            });
+        } catch (err) {
+            error(err);
+            try {
+                await interaction.reply({ content: 'An error occurred while linking. Try again later.', flags: MessageFlags.Ephemeral });
+            } catch {}
+        }
     }
 }).toJSON();

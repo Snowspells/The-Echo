@@ -24,7 +24,8 @@ class CommandsHandler {
                     const module = require(modulePath);
 
                     if (!module) {
-                        console.error("⚠️ Module returned undefined:", modulePath);
+                        const { error } = require('../../utils/Console');
+                        error("⚠️ Module returned undefined:", modulePath);
                         continue;
                     }
 
@@ -61,20 +62,16 @@ class CommandsHandler {
 
                     } else {
                         error('Invalid command type ' + module.__type__ + ' from command file ' + file);
-                        console.error();
                     }
 
                 } catch (err) {
-
-                    console.error("\n================ COMMAND LOAD ERROR ================");
-                    console.error("File:", file);
-                    console.error("Directory:", directory);
-                    console.error("Full path:", 'src/commands/' + directory + '/' + file);
-                    console.error("----------------------------------------------------");
-                    console.error(err);
-                    console.error("----------------------------------------------------");
-                    console.error(err.stack);
-                    console.error("====================================================\n");
+                    error("\n================ COMMAND LOAD ERROR ================");
+                    error("File:", file);
+                    error("Directory:", directory);
+                    error("Full path:", 'src/commands/' + directory + '/' + file);
+                    error("----------------------------------------------------");
+                    error(err);
+                    error("====================================================\n");
                 }
             }
         }

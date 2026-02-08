@@ -36,9 +36,9 @@ module.exports = new MessageCommand({
         }
 
         if (args[0] === config.commands.prefix) {
-            client.database.delete('prefix-' + message.guild.id);
+            client.database.deleteGuildPrefix(message.guild.id);
         } else {
-            client.database.set('prefix-' + message.guild.id, args[0]);
+            client.database.setGuildPrefix(message.guild.id, args[0]);
         }
 
         await message.reply({

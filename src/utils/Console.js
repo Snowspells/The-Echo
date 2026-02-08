@@ -1,56 +1,68 @@
 require('colors');
 const fs = require('fs');
 
-/**
- * @param {string[]} message 
- */
+const LEVELS = { error: 0, warn: 1, success: 2, info: 3, debug: 4 };
+let CURRENT_LEVEL = LEVELS[(process.env.LOG_LEVEL || 'info').toLowerCase()] ?? LEVELS.info;
+
+if (!fs.existsSync('./terminal.log')) {
+    fs.writeFileSync('./terminal.log', '', 'utf-8');
+}
+
+const shouldLog = (levelName) => {
+    const level = LEVELS[levelName] ?? LEVELS.info;
+    return level <= CURRENT_LEVEL;
+};
+
+const writeLog = (label, colorFn, message) => {
+    const time = new Date().toLocaleTimeString();
+    let fileContent = fs.readFileSync('./terminal.log', 'utf-8');
+
+    console.log(`[${time}]`.gray, colorFn(label), message);
+    fileContent += [`[${time}]`.gray, label, message].join(' ') + '\n';
+
+    fs.writeFileSync('./terminal.log', fileContent, 'utf-8');
+};
+
 const info = (...message) => {
-    const time = new Date().toLocaleTimeString();
-    let fileContent = fs.readFileSync('./terminal.log', 'utf-8');
+    if (!shouldLog('info')) return;
+    writeLog('[Info]'.blue, (s) => s.blue, message.join(' '));
+};
 
-    console.info(`[${time}]`.gray, '[Info]'.blue, message.join(' '));
-    fileContent += [`[${time}]`.gray, '[Info]'.blue, message.join(' ')].join(' ') + '\n';
-
-    fs.writeFileSync('./terminal.log', fileContent, 'utf-8');
-}
-
-/**
- * @param {string[]} message 
- */
 const success = (...message) => {
-    const time = new Date().toLocaleTimeString();
-    let fileContent = fs.readFileSync('./terminal.log', 'utf-8');
+    if (!shouldLog('success')) return;
+    writeLog('[OK]'.green, (s) => s.green, message.join(' '));
+};
 
-    console.info(`[${time}]`.gray, '[OK]'.green, message.join(' '));
-    fileContent += [`[${time}]`.gray, '[OK]'.green, message.join(' ')].join(' ') + '\n';
-
-    fs.writeFileSync('./terminal.log', fileContent, 'utf-8');
-}
-
-/**
- * @param {string[]} message 
- */
-const error = (...message) => {
-    const time = new Date().toLocaleTimeString();
-    let fileContent = fs.readFileSync('./terminal.log', 'utf-8');
-
-    console.error(`[${time}]`.gray, '[Error]'.red, message.join(' '));
-    fileContent += [`[${time}]`.gray, '[Error]'.red, message.join(' ')].join(' ') + '\n';
-
-    fs.writeFileSync('./terminal.log', fileContent, 'utf-8');
-}
-
-/**
- * @param {string[]} message 
- */
 const warn = (...message) => {
-    const time = new Date().toLocaleTimeString();
-    let fileContent = fs.readFileSync('./terminal.log', 'utf-8');
+    if (!shouldLog('warn')) return;
+    writeLog('[Warning]'.yellow, (s) => s.yellow, message.join(' '));
+};
 
-    console.warn(`[${time}]`.gray, '[Warning]'.yellow, message.join(' '));
-    fileContent += [`[${time}]`.gray, '[Warning]'.yellow, message.join(' ')].join(' ') + '\n';
+const error = (...message) => {
+    if (!shouldLog('error')) return;
 
-    fs.writeFileSync('./terminal.log', fileContent, 'utf-8');
-}
+    // If the last argument is an Error, include its stack trace
+    const last = message[message.length - 1];
+    let output = message.join(' ');
 
-module.exports = { info, success, error, warn }
+    if (last instanceof Error) {
+        output = message.slice(0, -1).join(' ');
+        output += (output.length ? ' ' : '') + last.stack;
+    }
+
+    writeLog('[Error]'.red, (s) => s.red, output);
+};
+
+const debug = (...message) => {
+    if (!shouldLog('debug')) return;
+    writeLog('[Debug]'.magenta, (s) => s.magenta, message.join(' '));
+};
+
+const setLogLevel = (levelName) => {
+    const l = (levelName || '').toLowerCase();
+    if (LEVELS[l] === undefined) return false;
+    CURRENT_LEVEL = LEVELS[l];
+    return true;
+};
+
+module.exports = { info, success, error, warn, debug, setLogLevel };
