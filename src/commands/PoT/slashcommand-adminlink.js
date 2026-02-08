@@ -4,7 +4,7 @@ const ApplicationCommand = require("../../structure/ApplicationCommand");
 module.exports = new ApplicationCommand({
     command: {
         name: 'adminlink',
-        description: "Admin command to create or overwrite a user's link",
+        description: "Admin command to create or overwrite a user's linked AGID",
         type: 1,
         options: [{
             name: 'user',

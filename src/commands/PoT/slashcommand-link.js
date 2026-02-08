@@ -20,7 +20,7 @@ module.exports = new ApplicationCommand({
         const { info, error } = require('../../utils/Console');
         try {
             const discordId = interaction.user.id;
-            const dummyAgid = `AGID-${Date.now()}`;
+            const dummyAgid = `${Date.now()}`;
 
             if (client.database.userExists(discordId)) {
                 await interaction.reply({
