@@ -9,7 +9,6 @@ class CommandsHandler {
     client;
 
     /**
-     *
      * @param {DiscordBot} client 
      */
     constructor(client) {
@@ -20,14 +19,18 @@ class CommandsHandler {
         for (const directory of readdirSync('./src/commands/')) {
             for (const file of readdirSync('./src/commands/' + directory).filter((f) => f.endsWith('.js'))) {
                 try {
-                    /**
-                     * @type {ApplicationCommand['data'] | MessageCommand['data']}
-                     */
-                    const module = require('../../commands/' + directory + '/' + file);
 
-                    if (!module) continue;
+                    const modulePath = '../../commands/' + directory + '/' + file;
+                    const module = require(modulePath);
 
+                    if (!module) {
+                        console.error("⚠️ Module returned undefined:", modulePath);
+                        continue;
+                    }
+
+                    // MESSAGE COMMAND
                     if (module.__type__ === 2) {
+
                         if (!module.command || !module.run) {
                             error('Unable to load the message command ' + file);
                             continue;
@@ -42,7 +45,10 @@ class CommandsHandler {
                         }
 
                         info('Loaded new message command: ' + file);
+
+                    // SLASH COMMAND
                     } else if (module.__type__ === 1) {
+
                         if (!module.command || !module.run) {
                             error('Unable to load the application command ' + file);
                             continue;
@@ -52,11 +58,23 @@ class CommandsHandler {
                         this.client.rest_application_commands_array.push(module.command);
 
                         info('Loaded new application command: ' + file);
+
                     } else {
                         error('Invalid command type ' + module.__type__ + ' from command file ' + file);
+                        console.error();
                     }
-                } catch {
-                    error('Unable to load a command from the path: ' + 'src/commands/' + directory + '/' + file);
+
+                } catch (err) {
+
+                    console.error("\n================ COMMAND LOAD ERROR ================");
+                    console.error("File:", file);
+                    console.error("Directory:", directory);
+                    console.error("Full path:", 'src/commands/' + directory + '/' + file);
+                    console.error("----------------------------------------------------");
+                    console.error(err);
+                    console.error("----------------------------------------------------");
+                    console.error(err.stack);
+                    console.error("====================================================\n");
                 }
             }
         }
@@ -81,9 +99,15 @@ class CommandsHandler {
         const rest = new REST(restOptions ? restOptions : { version: '10' }).setToken(this.client.token);
 
         if (development.enabled) {
-            await rest.put(Routes.applicationGuildCommands(this.client.user.id, development.guildId), { body: this.client.rest_application_commands_array });
+            await rest.put(
+                Routes.applicationGuildCommands(this.client.user.id, development.guildId),
+                { body: this.client.rest_application_commands_array }
+            );
         } else {
-            await rest.put(Routes.applicationCommands(this.client.user.id), { body: this.client.rest_application_commands_array });
+            await rest.put(
+                Routes.applicationCommands(this.client.user.id),
+                { body: this.client.rest_application_commands_array }
+            );
         }
     }
 }
