@@ -6,7 +6,7 @@ const { QuickYAML } = require("quick-yaml.db");
 module.exports = new ApplicationCommand({
     command: {
         name: 'link',
-        description: "Links player's Discord UUID to AGID (Nonfunctional at this time!)",
+        description: "Links player's Discord UUID to AGID (WIP)",
         type: 1,
         options: []
     },
@@ -21,17 +21,18 @@ module.exports = new ApplicationCommand({
     run: async (client, interaction) => {
 
         const discordId = interaction.user.id;
-
-        if (!DiscordBot.database.data.players) DiscordBot.database.data.players = {};
-
-        DiscordBot.database.data.players[discordId] = {
-            agid: null,
-            Marks: null,
-            Inventory: null,
-            Infractions: null
-        };
-
-        DiscordBot.database.save();
+        
+        Model = [
+                { variable: 'DID', type: string },
+                { variable: 'AGID', type: string },
+                { variable: 'Marks', type: number },
+                { variable: 'Inventory', type: string[''] }
+                
+            ];
+            
+        const db = new QuickYAML<Model>(DiscordBot.config.database);
+        
+        
 
         await interaction.reply({
             content: `Created test DB entry for ${discordId}`,
