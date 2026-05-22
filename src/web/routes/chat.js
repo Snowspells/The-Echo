@@ -16,7 +16,7 @@ router.get('/', requireAuth, (req, res) => {
 // Staff: Mute a user
 router.post('/mute', requireStaff(STAFF_LEVELS.MODERATOR), (req, res) => {
     const { userId, reason, duration } = req.body;
-    const user = req.resolvedUser || req.session.user;
+    const user = req.session.user;
 
     if (!userId) {
         return res.status(400).json({ error: 'Missing userId' });

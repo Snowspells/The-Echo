@@ -41,8 +41,10 @@ function requireAuth(req, res, next) {
         }
         return res.redirect('/auth/login');
     }
-    // Attach resolved user so downstream handlers can use it
-    req.resolvedUser = user;
+    // Set session user for token-auth so all downstream handlers work unchanged
+    if (!req.session.user) {
+        req.session.user = user;
+    }
     next();
 }
 
@@ -70,7 +72,9 @@ function requireStaff(minLevel = STAFF_LEVELS.SUPPORT) {
             });
         }
 
-        req.resolvedUser = user;
+        if (!req.session.user) {
+            req.session.user = user;
+        }
         next();
     };
 }

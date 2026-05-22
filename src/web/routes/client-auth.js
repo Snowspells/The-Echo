@@ -21,7 +21,7 @@ router.get('/login', (req, res) => {
     }
 
     const state = crypto.randomBytes(16).toString('hex');
-    req.session.client_oauth_state = state;
+    req.db.createOAuthState(state);
 
     const params = new URLSearchParams({
         client_id: clientId,
@@ -41,11 +41,9 @@ router.get('/login', (req, res) => {
 router.get('/callback', async (req, res) => {
     const { code, state } = req.query;
 
-    if (!code || state !== req.session.client_oauth_state) {
+    if (!code || !state || !req.db.consumeOAuthState(state)) {
         return res.status(400).json({ error: 'Invalid OAuth2 callback.' });
     }
-
-    delete req.session.client_oauth_state;
 
     try {
         const tokenResponse = await fetch(`${DISCORD_API}/oauth2/token`, {

@@ -151,6 +151,14 @@ class DatabaseManager {
             }
         }
 
+        // OAuth2 state tokens (for cross-context CSRF protection in standalone client auth)
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS client_oauth_states (
+                state TEXT PRIMARY KEY,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         // Client auth tokens table (for standalone client token-based auth)
         this.db.exec(`
             CREATE TABLE IF NOT EXISTS client_tokens (
@@ -799,6 +807,45 @@ class DatabaseManager {
         } catch (err) {
             const { error } = require('./Console');
             error('Error deleting expired client tokens:', err);
+        }
+    }
+
+    // Client OAuth State Methods (CSRF protection for cross-context auth flow)
+    createOAuthState(state) {
+        try {
+            this.db.prepare('INSERT INTO client_oauth_states (state) VALUES (?)').run(state);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error creating OAuth state:', err);
+        }
+    }
+
+    consumeOAuthState(state) {
+        try {
+            const row = this.db.prepare('SELECT * FROM client_oauth_states WHERE state = ?').get(state);
+            if (row) {
+                this.db.prepare('DELETE FROM client_oauth_states WHERE state = ?').run(state);
+                this.checkpointWAL();
+                // Reject states older than 10 minutes
+                const created = new Date(row.created_at);
+                if (Date.now() - created.getTime() > 10 * 60 * 1000) return null;
+            }
+            return row || null;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error consuming OAuth state:', err);
+            return null;
+        }
+    }
+
+    deleteExpiredOAuthStates() {
+        try {
+            this.db.prepare("DELETE FROM client_oauth_states WHERE created_at < datetime('now', '-10 minutes')").run();
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error deleting expired OAuth states:', err);
         }
     }
 
