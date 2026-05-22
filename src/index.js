@@ -11,6 +11,7 @@ module.exports = client;
 client.connect();
 
 const web = new WebServer(client);
+client.webServer = web;
 web.start();
 
 const { error } = require('./utils/Console');

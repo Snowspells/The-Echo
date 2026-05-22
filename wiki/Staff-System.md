@@ -46,8 +46,12 @@ The web middleware checks the user's staff level before allowing access to prote
 | Route | Minimum Level |
 |-------|---------------|
 | `GET /admin` | Support (1) |
+| `GET /chat/mutes` | Support (1) |
 | `POST /admin/users/:id/update` | Moderator (2) |
 | `POST /admin/users/:id/delete` | Administrator (3) |
+| `POST /chat/mute` | Moderator (2) |
+| `POST /chat/unmute` | Moderator (2) |
+| `POST /chat/delete-message` | Moderator (2) |
 
 ---
 
@@ -111,14 +115,18 @@ This tells The Echo which Discord guild's roles to check when a user logs into t
 - ✓ See the linked users table (read-only — no edit fields)
 - ✓ See staff roles configuration
 - ✓ See recent chat bridge messages
+- ✓ View active chat mutes
 - ✗ Cannot edit user data
 - ✗ Cannot delete users
+- ✗ Cannot mute/unmute users or delete messages
 
 ### Moderator (Level 2)
 - ✓ Everything in Support
 - ✓ Edit user AGID (inline text field)
 - ✓ Edit user marks (inline number field)
 - ✓ Save changes to user records
+- ✓ Mute/unmute users in web chat
+- ✓ Delete messages in web chat
 - ✗ Cannot delete users
 
 ### Administrator (Level 3)
@@ -142,4 +150,4 @@ This tells The Echo which Discord guild's roles to check when a user logs into t
 
 ## Future Plans
 
-The three-tier system is designed to be extended with additional permissions for in-game tools and moderation features as development progresses. The current web-based permissions serve as the foundation for a more comprehensive permission system.
+The three-tier system is designed to be extended with additional permissions for in-game tools and moderation features as development progresses.

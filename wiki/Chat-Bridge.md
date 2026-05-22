@@ -1,6 +1,6 @@
 # Chat Bridge
 
-The Echo provides a bidirectional chat bridge between a Discord channel and the in-game Global chat. Messages sent in either location are relayed to the other, keeping players connected whether they're in-game or on Discord.
+The Echo provides a real-time chat bridge between **Discord**, the **in-game Global chat**, and the **website**. Messages sent on any platform are relayed to all others, keeping Shattered Echoes community members connected wherever they are.
 
 ## How It Works
 
@@ -13,23 +13,109 @@ The Echo provides a bidirectional chat bridge between a Discord channel and the 
 │          │  GAME_WEBHOOK_URL  │          │  messageCreate     │          │
 │          │ <──────────────────│          │ <──────────────────│          │
 └──────────┘                    └──────────┘                    └──────────┘
+                                     │ ▲
+                                     │ │
+                              WebSocket (ws/chat)
+                                     │ │
+                                     ▼ │
+                                ┌──────────┐
+                                │ Website  │
+                                │  Users   │
+                                └──────────┘
 ```
 
-### Game → Discord (Inbound)
+### Game → Discord → Web (Inbound)
 
 1. A player sends a message in the game's Global chat
 2. The game server sends a `POST` request to The Echo's API at `/api/bridge/incoming`
 3. The Echo formats the message and sends it to the configured Discord channel
-4. The message appears as: **[Global] PlayerName:** message content
+4. The message is also broadcast to all connected website users via WebSocket
+5. The message appears in Discord as: **[Global] PlayerName:** message content
 
-### Discord → Game (Outbound)
+### Discord → Game + Web (Outbound)
 
 1. A user sends a message in the bridge Discord channel
 2. The Echo's `messageCreate` event listener detects the message
-3. The bot sends a `POST` request to the game server's webhook URL (`GAME_WEBHOOK_URL`)
-4. The game server receives the message and displays it in Global chat
+3. The bot sends a `POST` request to the game server's webhook URL
+4. The message is also broadcast to all connected website users via WebSocket
 
-Both directions are logged in the SQLite database for history and auditing.
+### Web → Discord + Game
+
+1. A user sends a message in the website chat
+2. The WebSocket server receives it, sanitizes it (XSS filtering), and checks if the user is muted
+3. The message is broadcast to all other website chat users
+4. It is relayed to the configured Discord bridge channel as: **[Web] Username:** message content
+5. It is relayed to the game server via the webhook URL
+
+All messages are logged in the SQLite database for history and auditing.
+
+---
+
+## Website Chat
+
+### Accessing the Chat
+
+Navigate to `/chat` on the web dashboard (requires login). The chat page includes:
+
+- **Message history** — The last 50 messages are loaded on connect
+- **Real-time updates** — New messages appear instantly via WebSocket
+- **Source labels** — Each message shows its origin: `[Discord]` (blue), `[Game]` (green), or `[Web]` (purple)
+- **Online count** — Shows how many users are connected to the web chat
+- **Connection status** — Green dot when connected, red when disconnected. Auto-reconnects.
+
+### WebSocket Protocol
+
+Connect to `ws://your-host/ws/chat` (or `wss://` for HTTPS). The connection requires a valid session cookie.
+
+**Server → Client messages:**
+
+| Type | Description |
+|------|-------------|
+| `history` | Sent on connect. Contains `messages` array of recent messages. |
+| `message` | A new chat message. Contains `source`, `author_name`, `author_id`, `content`, `timestamp`. |
+| `system` | A system notification (e.g. "User was muted"). Contains `content`. |
+| `delete_message` | A message was deleted by staff. Contains `messageId`. |
+| `online_count` | Updated count of connected web users. Contains `count`. |
+| `muted` | You have been muted. Contains `reason` and `expires_at`. |
+| `unmuted` | Your mute has been lifted. |
+| `error` | An error message (e.g. "You are muted"). Contains `message`. |
+
+**Client → Server messages:**
+
+| Type | Description |
+|------|-------------|
+| `message` | Send a chat message. Must contain `content` (max 500 characters). |
+
+---
+
+## Staff Moderation Tools
+
+Staff members with **Moderator** level or above see moderation controls in the web chat:
+
+### Mute a User
+- Hover over a message → click the mute icon
+- Enter an optional reason and duration (in minutes)
+- Permanent mute if no duration is specified
+- The muted user receives a notification and their input is disabled
+
+### Unmute a User
+- Click "Muted Users" in the moderation bar
+- View all active mutes with reason and expiration
+- Click "Unmute" to lift a mute immediately
+
+### Delete a Message
+- Hover over a message → click the ✕ button
+- The message is removed from the database
+- All connected clients see the message replaced with "[Message deleted by staff]"
+
+### Moderation API Routes
+
+| Route | Method | Access | Description |
+|-------|--------|--------|-------------|
+| `/chat/mute` | POST | Moderator+ | Mute a user (`userId`, optional `reason`, optional `duration` in minutes) |
+| `/chat/unmute` | POST | Moderator+ | Unmute a user (`userId`) |
+| `/chat/delete-message` | POST | Moderator+ | Delete a message (`messageId`) |
+| `/chat/mutes` | GET | Support+ | List all active mutes |
 
 ---
 
@@ -45,9 +131,9 @@ GAME_WEBHOOK_URL=http://your-game-server.com/api/chat
 
 | Variable | Description |
 |----------|-------------|
-| `BRIDGE_CHANNEL_ID` | The Discord channel ID that serves as the bridge endpoint. Messages in this channel are relayed to the game. |
+| `BRIDGE_CHANNEL_ID` | The Discord channel ID that serves as the bridge endpoint. Messages in this channel are relayed to the game and web. |
 | `BRIDGE_API_KEY` | A shared secret key used to authenticate API requests from the game server. Choose a strong random string. |
-| `GAME_WEBHOOK_URL` | The URL on your game server that accepts incoming chat messages from Discord. The Echo sends `POST` requests here. |
+| `GAME_WEBHOOK_URL` | The URL on your game server that accepts incoming chat messages from Discord/web. The Echo sends `POST` requests here. |
 
 ### How to find a Channel ID
 
@@ -91,7 +177,7 @@ POST /api/bridge/incoming
 
 | Status | Body | Meaning |
 |--------|------|---------|
-| `200` | `{ "status": "ok" }` | Message delivered to Discord |
+| `200` | `{ "success": true }` | Message delivered to Discord and web |
 | `400` | `{ "error": "Missing playerName or message" }` | Required fields missing |
 | `401` | `{ "error": "Unauthorized" }` | Invalid or missing API key |
 | `500` | `{ "error": "Bridge channel not configured" }` | `BRIDGE_CHANNEL_ID` not set |
@@ -136,10 +222,10 @@ GET /api/bridge/messages?limit=50
     },
     {
         "id": 2,
-        "source": "game",
-        "author_name": "PlayerOne",
-        "author_id": "player-id",
-        "content": "Hello from the game!",
+        "source": "web",
+        "author_name": "WebUser",
+        "author_id": "987654321",
+        "content": "Hello from the website!",
         "timestamp": "2025-01-15T12:00:05.000Z"
     }
 ]
@@ -161,45 +247,9 @@ No authentication required.
 ```json
 {
     "status": "ok",
-    "bot": "online",
-    "uptime": 123456,
-    "bridgeChannel": true
-}
-```
-
-| Field | Description |
-|-------|-------------|
-| `status` | Always `"ok"` if the server is running |
-| `bot` | `"online"` if the Discord bot is logged in, `"offline"` otherwise |
-| `uptime` | Bot uptime in milliseconds (or `null` if offline) |
-| `bridgeChannel` | `true` if `BRIDGE_CHANNEL_ID` is configured, `false` otherwise |
-
----
-
-### Get user data
-
-```http
-GET /api/user/:discordId
-```
-
-**Headers:**
-| Header | Value |
-|--------|-------|
-| `X-API-Key` | Your `BRIDGE_API_KEY` value |
-
-**Response (200):**
-```json
-{
-    "discordId": "123456789",
-    "agid": "game-account-id",
-    "marks": 100
-}
-```
-
-**Response (404):**
-```json
-{
-    "error": "User not found"
+    "bot_online": true,
+    "bridge_channel_configured": true,
+    "uptime": 123456
 }
 ```
 
@@ -211,33 +261,37 @@ GET /api/user/:discordId
 
 To complete the bridge, your game server needs:
 
-1. **Send messages to Discord** — When a player sends a message in Global chat, make a `POST` request to `/api/bridge/incoming` with the player's name and message.
+1. **Send messages to Discord/Web** — When a player sends a message in Global chat, make a `POST` request to `/api/bridge/incoming` with the player's name and message.
 
-2. **Receive messages from Discord** — Set up an HTTP endpoint at your `GAME_WEBHOOK_URL` that accepts `POST` requests with this body:
+2. **Receive messages from Discord/Web** — Set up an HTTP endpoint at your `GAME_WEBHOOK_URL` that accepts `POST` requests with this body:
 
 ```json
 {
-    "username": "DiscordUsername",
-    "userId": "123456789",
+    "playerName": "DiscordUsername",
     "message": "Hello from Discord!",
+    "discordId": "123456789",
     "source": "discord"
 }
 ```
 
-Your game server should then display this message in the Global chat channel.
+The `source` field will be `"discord"` or `"web"` depending on where the message originated.
 
 ---
 
 ## Message Format
 
 ### In Discord (from game)
-Messages from the game appear in Discord as:
 ```
 [Global] PlayerName: message content
 ```
 
-### In the game (from Discord)
-The exact format depends on your game server's implementation. The Echo sends the raw username, user ID, message, and source identifier — your game server decides how to display it.
+### In Discord (from web)
+```
+[Web] Username: message content
+```
+
+### On the website
+Each message shows a colored source label, the author name, and the content. Messages from Discord are labeled in blue, game messages in green, and web messages in purple.
 
 ---
 
@@ -245,7 +299,7 @@ The exact format depends on your game server's implementation. The Echo sends th
 
 The staff admin panel on the web dashboard includes a **Recent Chat Bridge Messages** section showing the last 25 bridged messages. Each entry shows:
 
-- **Source** — Discord (blue) or Game (green)
+- **Source** — Discord (blue), Game (green), or Web (purple)
 - **Author** — The sender's name
 - **Content** — The message text
 - **Timestamp** — When the message was bridged
@@ -255,5 +309,9 @@ The staff admin panel on the web dashboard includes a **Recent Chat Bridge Messa
 ## Behavior Notes
 
 - **Bot messages are ignored** — The bridge does not relay messages sent by bots in the Discord channel, preventing infinite relay loops.
-- **Graceful degradation** — If `GAME_WEBHOOK_URL` is not configured, outbound relay (Discord → Game) is silently skipped. The bot logs this at debug level.
-- **All messages are logged** — Both inbound and outbound messages are saved to the `chat_bridge_messages` SQLite table, regardless of whether delivery succeeds.
+- **Graceful degradation** — If `GAME_WEBHOOK_URL` is not configured, outbound relay (Discord/Web → Game) is silently skipped.
+- **All messages are logged** — All messages from all sources are saved to the `chat_bridge_messages` SQLite table.
+- **XSS protection** — All web chat messages are sanitized through the xss library before storage and broadcast.
+- **Rate limiting** — The API is rate-limited to 60 requests per minute. The WebSocket connection enforces message length limits (500 characters).
+- **Muted users** — Muted users cannot send messages through the web chat. Expired mutes are automatically cleared.
+- **Auto-reconnect** — The web chat client automatically reconnects after 3 seconds if the WebSocket connection drops.

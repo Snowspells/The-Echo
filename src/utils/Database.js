@@ -110,6 +110,18 @@ class DatabaseManager {
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // Chat mutes table
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS chat_mutes (
+                user_id TEXT PRIMARY KEY,
+                muted_by TEXT NOT NULL,
+                muted_by_name TEXT NOT NULL,
+                reason TEXT,
+                expires_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
     }
 
     // Guild Settings Methods
@@ -582,6 +594,59 @@ class DatabaseManager {
             const { error } = require('./Console');
             error('Error getting ticket stats:', err);
             return { total: 0, open: 0, closed: 0 };
+        }
+    }
+
+    // Chat Mute Methods
+    setChatMute(userId, mutedBy, mutedByName, reason, expiresAt) {
+        try {
+            this.db.prepare(
+                'INSERT OR REPLACE INTO chat_mutes (user_id, muted_by, muted_by_name, reason, expires_at) VALUES (?, ?, ?, ?, ?)'
+            ).run(userId, mutedBy, mutedByName, reason || null, expiresAt || null);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error setting chat mute:', err);
+        }
+    }
+
+    getChatMute(userId) {
+        try {
+            return this.db.prepare('SELECT * FROM chat_mutes WHERE user_id = ?').get(userId) || null;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting chat mute:', err);
+            return null;
+        }
+    }
+
+    removeChatMute(userId) {
+        try {
+            this.db.prepare('DELETE FROM chat_mutes WHERE user_id = ?').run(userId);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error removing chat mute:', err);
+        }
+    }
+
+    getAllChatMutes() {
+        try {
+            return this.db.prepare('SELECT * FROM chat_mutes ORDER BY created_at DESC').all();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting all chat mutes:', err);
+            return [];
+        }
+    }
+
+    deleteBridgeMessage(messageId) {
+        try {
+            this.db.prepare('DELETE FROM chat_bridge_messages WHERE id = ?').run(messageId);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error deleting bridge message:', err);
         }
     }
 

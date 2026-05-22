@@ -127,6 +127,27 @@ Shows full details for a single ticket:
 
 ---
 
+### Global Chat (`/chat`)
+
+*Requires login.*
+
+A real-time chatroom bridged with Discord and the in-game Global channel. See [Chat Bridge](Chat-Bridge.md) for full details.
+
+**Features:**
+- Live messages from Discord, the game, and other web users, all in one view
+- Color-coded source labels: Discord (blue), Game (green), Web (purple)
+- Connection status indicator (green/red dot) with auto-reconnect
+- Online user count
+- Message input with 500-character limit
+
+**Staff Moderation** (Moderator level and above):
+- **Moderation bar** — Toggle to see currently muted users
+- **Delete message** — Hover a message and click ✕ to remove it
+- **Mute user** — Hover a message and click the mute icon, enter reason and optional duration
+- **Unmute user** — View muted users list and click "Unmute"
+
+---
+
 ### Error Page
 
 Displayed when:
@@ -147,6 +168,7 @@ The navigation bar appears on every page and includes:
 | **The Echo** (brand) | Always | Links to the home page |
 | **Home** | Always | Links to `/` |
 | **Dashboard** | Logged in | Links to `/dashboard` |
+| **Chat** | Logged in | Links to `/chat` — real-time chatroom bridged with Discord and game |
 | **Tickets** | Logged in | Links to `/tickets` — view your tickets or all tickets (staff) |
 | **Staff Panel** | Staff only | Links to `/admin` (only shown if the user has a staff level) |
 | **Staff Badge** | Staff only | Color-coded badge showing the user's tier (e.g. "Moderator") |

@@ -33,6 +33,12 @@ router.post('/bridge/incoming', (req, res) => {
         .then(() => {
             req.db.logBridgeMessage('game', playerName, playerId || null, message);
             info(`Bridge (Game -> Discord): ${playerName}: ${message}`);
+
+            // Relay to web clients
+            if (req.webServer) {
+                req.webServer.relayMessageToWeb('game', playerName, playerId || null, message);
+            }
+
             res.json({ success: true });
         })
         .catch((err) => {

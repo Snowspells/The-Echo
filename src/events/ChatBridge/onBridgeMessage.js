@@ -42,6 +42,11 @@ module.exports = new Event({
             } else {
                 warn(`Bridge relay failed (${response.status}): ${displayName}: ${content}`);
             }
+
+            // Relay to web clients
+            if (client.webServer) {
+                client.webServer.relayMessageToWeb('discord', displayName, message.author.id, content);
+            }
         } catch (err) {
             error('Bridge relay error:', err);
         }
