@@ -44,6 +44,18 @@ class DatabaseManager {
             )
         `);
 
+        // Staff roles table (maps Discord role IDs to staff levels)
+        // Levels: 1 = Support, 2 = Moderator, 3 = Administrator
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS staff_roles (
+                role_id TEXT PRIMARY KEY,
+                guild_id TEXT NOT NULL,
+                level INTEGER NOT NULL,
+                label TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         // Chat bridge messages log
         this.db.exec(`
             CREATE TABLE IF NOT EXISTS chat_bridge_messages (
@@ -180,6 +192,75 @@ class DatabaseManager {
         } catch (err) {
             const { error } = require('./Console');
             error('Error checkpointing WAL:', err);
+        }
+    }
+
+    // Staff Role Methods
+    // Levels: 1 = Support, 2 = Moderator, 3 = Administrator
+    static STAFF_LEVELS = { SUPPORT: 1, MODERATOR: 2, ADMINISTRATOR: 3 };
+    static STAFF_LABELS = { 1: 'Support', 2: 'Moderator', 3: 'Administrator' };
+
+    setStaffRole(roleId, guildId, level) {
+        try {
+            const label = DatabaseManager.STAFF_LABELS[level];
+            if (!label) return false;
+            this.db.prepare(
+                'INSERT OR REPLACE INTO staff_roles (role_id, guild_id, level, label) VALUES (?, ?, ?, ?)'
+            ).run(roleId, guildId, level, label);
+            this.checkpointWAL();
+            return true;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error setting staff role:', err);
+            return false;
+        }
+    }
+
+    removeStaffRole(roleId) {
+        try {
+            this.db.prepare('DELETE FROM staff_roles WHERE role_id = ?').run(roleId);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error removing staff role:', err);
+        }
+    }
+
+    getStaffRole(roleId) {
+        try {
+            return this.db.prepare('SELECT * FROM staff_roles WHERE role_id = ?').get(roleId) || null;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting staff role:', err);
+            return null;
+        }
+    }
+
+    getAllStaffRoles(guildId) {
+        try {
+            if (guildId) {
+                return this.db.prepare('SELECT * FROM staff_roles WHERE guild_id = ? ORDER BY level DESC').all(guildId);
+            }
+            return this.db.prepare('SELECT * FROM staff_roles ORDER BY level DESC').all();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting all staff roles:', err);
+            return [];
+        }
+    }
+
+    getStaffLevelForRoles(roleIds) {
+        try {
+            if (!roleIds || roleIds.length === 0) return 0;
+            const placeholders = roleIds.map(() => '?').join(',');
+            const result = this.db.prepare(
+                `SELECT MAX(level) as max_level FROM staff_roles WHERE role_id IN (${placeholders})`
+            ).get(...roleIds);
+            return result?.max_level || 0;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting staff level for roles:', err);
+            return 0;
         }
     }
 

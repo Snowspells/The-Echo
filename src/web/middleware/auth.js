@@ -1,4 +1,7 @@
 const config = require('../../config');
+const DatabaseManager = require('../../utils/Database');
+
+const STAFF_LEVELS = DatabaseManager.STAFF_LEVELS;
 
 function requireAuth(req, res, next) {
     if (!req.session.user) {
@@ -7,25 +10,25 @@ function requireAuth(req, res, next) {
     next();
 }
 
-function requireStaff(req, res, next) {
-    if (!req.session.user) {
-        return res.redirect('/auth/login');
-    }
+function requireStaff(minLevel = STAFF_LEVELS.SUPPORT) {
+    return (req, res, next) => {
+        if (!req.session.user) {
+            return res.redirect('/auth/login');
+        }
 
-    const staffIds = [
-        config.users.ownerId,
-        ...(config.users.developers || [])
-    ];
+        const staffLevel = req.session.user.staffLevel || 0;
+        const isOwner = req.session.user.id === config.users.ownerId;
 
-    if (!staffIds.includes(req.session.user.id)) {
-        return res.status(403).render('error', {
-            title: '403 - Forbidden',
-            message: 'You do not have staff access.',
-            user: req.session.user
-        });
-    }
+        if (!isOwner && staffLevel < minLevel) {
+            return res.status(403).render('error', {
+                title: '403 - Forbidden',
+                message: 'You do not have the required staff access level.',
+                user: req.session.user
+            });
+        }
 
-    next();
+        next();
+    };
 }
 
-module.exports = { requireAuth, requireStaff };
+module.exports = { requireAuth, requireStaff, STAFF_LEVELS };

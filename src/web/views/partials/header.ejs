@@ -17,6 +17,7 @@
                 <a href="/dashboard">Dashboard</a>
                 <% if (user.isStaff) { %>
                     <a href="/admin">Staff Panel</a>
+                    <span class="staff-badge staff-level-<%= user.staffLevel %>"><%= user.staffLabel %></span>
                 <% } %>
                 <div class="nav-user">
                     <img src="<%= user.avatar

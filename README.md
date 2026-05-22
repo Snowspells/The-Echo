@@ -12,11 +12,12 @@ A Discord bot and web dashboard for community management, account linking, and c
 - Advanced command options: cooldowns, permission checks, owner/developer restrictions.
 - Per-guild configurable prefix.
 - Account linking system (`/link`, `/adminlink`) to connect Discord users to game accounts (AGID).
+- Staff role management (`/staffrole assign`, `/staffrole remove`, `/staffrole list`) with three tiers: Support, Moderator, Administrator.
 
 ### Web Dashboard
 - **Discord OAuth2 Login** — Sign in with your Discord account.
 - **User Dashboard** — View your linked game account, marks (currency), and inventory.
-- **Staff Admin Panel** — Manage linked users, view bot stats, and monitor the chat bridge. Access restricted to bot owner and developers defined in `config.js`.
+- **Staff Admin Panel** — Manage linked users, view bot stats, and monitor the chat bridge. Role-based access with three tiers: Support (read-only), Moderator (edit users), and Administrator (full access). Access is determined by Discord roles configured via the `/staffrole` command.
 
 ### Chat Bridge (Discord <-> Game)
 - Bidirectional message relay between a Discord channel and the in-game "Global" chat.
@@ -61,6 +62,9 @@ A Discord bot and web dashboard for community management, account linking, and c
    WEB_BASE_URL=http://localhost:3000
    WEB_PORT=3000
    SESSION_SECRET=a_random_secret_string
+
+   # Staff Roles (guild where staff roles are checked)
+   STAFF_GUILD_ID=your_discord_guild_id
 
    # Chat Bridge
    BRIDGE_CHANNEL_ID=discord_channel_id_for_bridge
