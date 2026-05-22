@@ -27,6 +27,34 @@ class DatabaseManager {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // Web sessions table (for Discord OAuth2 sessions)
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS web_sessions (
+                session_id TEXT PRIMARY KEY,
+                discord_id TEXT NOT NULL,
+                access_token TEXT NOT NULL,
+                refresh_token TEXT,
+                username TEXT,
+                discriminator TEXT,
+                avatar TEXT,
+                is_staff INTEGER DEFAULT 0,
+                expires_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Chat bridge messages log
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS chat_bridge_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source TEXT NOT NULL,
+                author_name TEXT NOT NULL,
+                author_id TEXT,
+                content TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
     }
 
     // Guild Settings Methods
@@ -152,6 +180,76 @@ class DatabaseManager {
         } catch (err) {
             const { error } = require('./Console');
             error('Error checkpointing WAL:', err);
+        }
+    }
+
+    // Web Session Methods
+    getWebSession(sessionId) {
+        try {
+            return this.db.prepare('SELECT * FROM web_sessions WHERE session_id = ?').get(sessionId) || null;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting web session:', err);
+            return null;
+        }
+    }
+
+    createWebSession(sessionId, data) {
+        try {
+            this.db.prepare(`
+                INSERT OR REPLACE INTO web_sessions
+                (session_id, discord_id, access_token, refresh_token, username, discriminator, avatar, is_staff, expires_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+                sessionId,
+                data.discord_id,
+                data.access_token,
+                data.refresh_token || null,
+                data.username || null,
+                data.discriminator || null,
+                data.avatar || null,
+                data.is_staff ? 1 : 0,
+                data.expires_at || null
+            );
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error creating web session:', err);
+        }
+    }
+
+    deleteWebSession(sessionId) {
+        try {
+            this.db.prepare('DELETE FROM web_sessions WHERE session_id = ?').run(sessionId);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error deleting web session:', err);
+        }
+    }
+
+    // Chat Bridge Methods
+    logBridgeMessage(source, authorName, authorId, content) {
+        try {
+            this.db.prepare(
+                'INSERT INTO chat_bridge_messages (source, author_name, author_id, content) VALUES (?, ?, ?, ?)'
+            ).run(source, authorName, authorId || null, content);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error logging bridge message:', err);
+        }
+    }
+
+    getRecentBridgeMessages(limit = 50) {
+        try {
+            return this.db.prepare(
+                'SELECT * FROM chat_bridge_messages ORDER BY timestamp DESC LIMIT ?'
+            ).all(limit).reverse();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting bridge messages:', err);
+            return [];
         }
     }
 

@@ -1,0 +1,61 @@
+<%- include('partials/header', { title: 'Dashboard', user }) %>
+
+<div class="dashboard">
+    <h1>Dashboard</h1>
+
+    <div class="profile-section">
+        <div class="profile-card">
+            <img src="<%= user.avatar
+                ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
+                : `https://cdn.discordapp.com/embed/avatars/${parseInt(user.id) % 5}.png` %>"
+                alt="avatar" class="profile-avatar">
+            <h2><%= user.username %></h2>
+            <p class="profile-id">Discord ID: <code><%= user.id %></code></p>
+        </div>
+    </div>
+
+    <% if (linkedAccount) { %>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>AGID</h3>
+                <p class="stat-value"><%= linkedAccount.agid %></p>
+                <span class="stat-label">Game Account ID</span>
+            </div>
+            <div class="stat-card">
+                <h3>Marks</h3>
+                <p class="stat-value"><%= linkedAccount.marks %></p>
+                <span class="stat-label">Currency</span>
+            </div>
+            <div class="stat-card">
+                <h3>Linked Since</h3>
+                <p class="stat-value"><%= linkedAccount.created_at ? new Date(linkedAccount.created_at).toLocaleDateString() : 'N/A' %></p>
+                <span class="stat-label">Account Creation</span>
+            </div>
+        </div>
+
+        <div class="inventory-section">
+            <h2>Inventory</h2>
+            <% if (inventory.length > 0) { %>
+                <div class="inventory-grid">
+                    <% inventory.forEach(function(item) { %>
+                        <div class="inventory-item">
+                            <span><%= typeof item === 'string' ? item : JSON.stringify(item) %></span>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } else { %>
+                <div class="empty-state">
+                    <p>Your inventory is empty.</p>
+                </div>
+            <% } %>
+        </div>
+    <% } else { %>
+        <div class="not-linked">
+            <h2>Account Not Linked</h2>
+            <p>Your Discord account is not linked to a game account yet.</p>
+            <p>Use the <code>/link</code> command in Discord to connect your account, or ask a staff member to link you with <code>/adminlink</code>.</p>
+        </div>
+    <% } %>
+</div>
+
+<%- include('partials/footer') %>

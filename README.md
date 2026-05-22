@@ -1,157 +1,154 @@
-# <samp>DiscordJS-V14-Bot-Template</samp> v3
+# The Echo
 
-A Discord bot commands, components and events handler based on **discord.js v14** and fully written in JavaScript.
+A Discord bot and web dashboard for community management, account linking, and cross-platform chat bridging. Built on **discord.js v14** and **Express.js**.
 
-Did you like the project? Click on the star button (⭐️) right above your screen, thank you!
+*The Echo Beckons. The Echo Nurtures. The Echo Watches.*
 
 ## Features
-- Updated to the latest version of [discord.js v14.x](https://github.com/discordjs/discord.js/releases).
-- Supports all possible type of commands.
-    - Message commands.
-    - Application commands:
-        - Chat Input
-        - User context
-        - Message context
-- Handles components.
-    - Buttons
-    - Select menus
-    - Modals
-    - Autocomplete
-- Easy and simple to use.
-- Advanced command options.
-- Simple Database included (YAML).
 
-## Commands, Components, and Events structure:
-### Message commands:
+### Discord Bot
+- Full command handler supporting message commands, slash commands, user/message context menus.
+- Component handling: buttons, select menus, modals, autocomplete.
+- Advanced command options: cooldowns, permission checks, owner/developer restrictions.
+- Per-guild configurable prefix.
+- Account linking system (`/link`, `/adminlink`) to connect Discord users to game accounts (AGID).
 
-[`Partial`](https://www.typescriptlang.org/docs/handbook/utility-types.html#partialtype).<br>
-`Awaitable` means the function might be **async**.
+### Web Dashboard
+- **Discord OAuth2 Login** — Sign in with your Discord account.
+- **User Dashboard** — View your linked game account, marks (currency), and inventory.
+- **Staff Admin Panel** — Manage linked users, view bot stats, and monitor the chat bridge. Access restricted to bot owner and developers defined in `config.js`.
 
-```ts
-new MessageCommand({
-    command: {
-        name: string, // The command name
-        description?: string, // The command description (optional)
-        aliases?: string[], // The command aliases (optional)
-        permissions?: PermissionResolvable[], // The command permissions (optional)
-    },
-    options?: Partial<{
-        cooldown: number, // The command cooldown, in milliseconds
-        botOwner: boolean, // Bot owner can only run it? (true = yes, false = no)
-        guildOwner: boolean, // Guild owner can only run it? (true = yes, false = no)
-        botDevelopers: boolean, // Bot developers can only run it? (true = yes, false = no)
-        nsfw: boolean // The command contains NSFW content? (true = yes, false = no)
-    }>,
-    run: Awaitable<(client: DiscordBot, message: Message, args: string[]) => void> // The main function to execute the command
-});
-```
-
-### Application commands (Chat input, User context, Message context):
-
-[`APIApplicationCommand`](https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-structure), [`Partial`](https://www.typescriptlang.org/docs/handbook/utility-types.html#partialtype).<br>
-`Awaitable` means the function might be **async**.
-
-```ts
-new ApplicationCommand({
-    command: APIApplicationCommand,
-    options?: Partial<{
-        cooldown: number, // The command cooldown, in milliseconds
-        botOwner: boolean, // Bot owner can only run it? (true = yes, false = no)
-        guildOwner: boolean, // Guild owner can only run it? (true = yes, false = no)
-        botDevelopers: boolean, // Bot developers can only run it? (true = yes, false = no)
-    }>,
-    run: Awaitable<(client: DiscordBot, interaction: Interaction) => void> // The main function to execute the command
-});
-```
-
-### Components:
-#### Autocomplete:
-
-`Awaitable` means the function might be **async**.
-
-```ts
-new AutocompleteComponent({
-    commandName: string,
-    run: Awaitable<(client: DiscordBot, interaction: AutocompleteInteraction) => void> // The main function to execute the command
-});
-```
-
-#### Buttons, Select Menus, and Modals:
-
-[`Partial`](https://www.typescriptlang.org/docs/handbook/utility-types.html#partialtype).<br>
-`Awaitable` means the function might be **async**.
-
-```ts
-new Component({
-    customId: string,
-    type: 'modal' | 'select' | 'button',
-    options?: Partial<{
-        public: boolean // Other users can use the main interaction author button/select? (true = yes, false = no)
-    }>
-    run: Awaitable<(client: DiscordBot, interaction: Interaction) => void> // The main function to execute the command
-});
-```
-
-### Events:
-
-`Awaitable` means the function might be **async**.<br>
-`K` is a type parameter, extends `keyof ClientEvents`.
-
-```ts
-new Event({
-    event: K,
-    once?: boolean, // The event can only happen once? (true = yes, false = no)
-    run: Awaitable<(client: DiscordBot, ...args: ClientEvents[K]) => void>
-});
-```
+### Chat Bridge (Discord <-> Game)
+- Bidirectional message relay between a Discord channel and the in-game "Global" chat.
+- **REST API** for the game server to push messages into Discord (`POST /api/bridge/incoming`).
+- **Outbound relay** automatically forwards Discord messages from the bridge channel to the game server via webhook.
+- Message logging with history retrieval.
+- Health check endpoint (`GET /api/bridge/health`).
 
 ## Dependencies
-- **colors** → latest
-- **discord.js** → 14.13.0 or newer
-- **dotenv** → latest
-- **quick-yaml.db** → latest
+- **discord.js** — ^14.25.0
+- **better-sqlite3** — ^9.2.2
+- **express** — ^5.2.1
+- **express-session** — ^1.19.0
+- **ejs** — ^5.0.2
+- **colors** — ^1.4.0
+- **dotenv** — ^16.4.5
 
 > [!NOTE]
-> **Node.js v16.11.0** or newer is required to run **discord.js**.
+> **Node.js v16.11.0** or newer is required.
 
 ## Setup
-1. Install a code editor ([Visual Studio Code](https://code.visualstudio.com/Download) for an example).
-2. Download this project as a **.zip** file: [Download](https://github.com/TFAGaming/DiscordJS-V14-Bot-Template/archive/refs/heads/main.zip)
-3. Extract the **.zip** file into a normal folder.
-4. Open your code editor, click on **Open Folder**, and select the new created folder.
-5. Rename the following files:
 
-- `src/example.config.js` → `src/config.js`: Used for handler configuration.
-- `.env.example` → `.env`: Used for secrets, like the Discord bot token.
-- `example.database.yml` → `database.yml`: Used as a main file for the database.
-- `example.terminal.log` → `terminal.log`: Used as a clone of terminal (to save previous terminal messages).
+1. Clone or download this repository.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-6. Fill all the required values in **config.js** and **.env**.
+3. Copy and configure the required files:
+   - `src/example.config.js` -> `src/config.js` — Handler configuration (prefix, owner ID, developer IDs, etc.)
+   - `.env.example` -> `.env` — Secrets and environment variables.
+
+4. Fill in your `.env` file with the following values:
+
+   ```env
+   # Discord Bot
+   CLIENT_TOKEN=your_discord_bot_token
+
+   # Discord OAuth2 (for web dashboard)
+   DISCORD_CLIENT_ID=your_discord_app_client_id
+   DISCORD_CLIENT_SECRET=your_discord_app_client_secret
+   WEB_BASE_URL=http://localhost:3000
+   WEB_PORT=3000
+   SESSION_SECRET=a_random_secret_string
+
+   # Chat Bridge
+   BRIDGE_CHANNEL_ID=discord_channel_id_for_bridge
+   BRIDGE_API_KEY=a_secret_key_for_game_server_api
+   GAME_WEBHOOK_URL=http://your-game-server/api/chat
+   
+   # Logging
+   LOG_LEVEL=info
+   ```
+
+5. Fill in `src/config.js` with your bot owner ID, developer IDs, and other settings.
+
+6. Start the bot:
+   ```bash
+   npm start
+   ```
+
+   The Discord bot and web dashboard will start together. The web dashboard runs on the port specified by `WEB_PORT` (default: 3000).
 
 > [!CAUTION]
-> Please remember not to share your Discord bot token! This will give access to attackers to do anything they want with your bot, so please keep the token in a safe place, which is the **.env** file.
+> Never share your Discord bot token or client secret! Keep them in the `.env` file which is gitignored.
 
-7. Initialize a new project: `npm init` (To skip every step, do `npm init -y`).
-8. Install all [required dependencies](#dependencies): `npm install colors discord.js dotenv quick-yaml.db`
+## Chat Bridge API
 
-9. Run the command `node .` or `npm run start` to start the bot.
-10. Enjoy! The bot should be online.
+The game server communicates with The Echo via a REST API, authenticated with the `BRIDGE_API_KEY` header.
 
-## Contributing
-Feel free to fork the repository and submit a new pull request if you wish to contribute to this project.
+### Send a message from game to Discord
+```
+POST /api/bridge/incoming
+Headers: X-API-Key: your_bridge_api_key
+Body: { "playerName": "PlayerOne", "message": "Hello from the game!", "playerId": "optional-id" }
+```
 
-Before you submit a pull request, ensure you tested it and have no issues. Also, keep the same coding style, which means don't use many unnecessary spaces or tabs.
+### Get recent bridge messages
+```
+GET /api/bridge/messages?limit=50
+Headers: X-API-Key: your_bridge_api_key
+```
 
-Thank you to all the people who contributed to **DiscordJS-V14-Bot-Template**!
+### Health check
+```
+GET /api/bridge/health
+```
 
-<img src="https://contrib.rocks/image?repo=TFAGaming/DiscordJS-V14-Bot-Template">
+### Get user data
+```
+GET /api/user/:discordId
+Headers: X-API-Key: your_bridge_api_key
+```
 
-## Support
-Join our Discord server if you have any questions to ask, or if you have a problem with this project, you can go to the [issues section](https://github.com/TFAGaming/DiscordJS-V14-Bot-Template/issues) and submit a new issue.
+## Project Structure
+```
+src/
+  index.js                     # Entry point
+  config.js                    # Bot configuration (gitignored)
+  client/
+    DiscordBot.js              # Main bot client
+    handler/                   # Command, component, and event handlers
+  commands/
+    Developer/                 # Eval, reload commands
+    Information/               # Help command
+    PoT/                       # Account linking commands (link, adminlink)
+    Utility/                   # Ping, setprefix
+  components/                  # Button, modal, select menu, autocomplete handlers
+  events/
+    Client/                    # Bot ready event
+    ChatBridge/                # Discord -> Game message relay
+  structure/                   # Base classes for commands, events, components
+  utils/
+    Console.js                 # Logging system with levels
+    Database.js                # SQLite database manager
+  web/
+    server.js                  # Express web server
+    middleware/
+      auth.js                  # Authentication & staff authorization
+    routes/
+      auth.js                  # Discord OAuth2 login/callback/logout
+      dashboard.js             # User dashboard
+      admin.js                 # Staff admin panel
+      api.js                   # Chat bridge & user REST API
+    views/                     # EJS templates
+    public/
+      css/style.css            # Dark theme stylesheet
+```
 
-<a href="https://discord.gg/E6VFACWu5V">
-  <img src="https://discord.com/api/guilds/918611797194465280/widget.png?style=banner3">
-</a>
+## Log Levels
+
+See [LOG_LEVELS.md](./LOG_LEVELS.md) for details on configuring log verbosity.
 
 ## License
 [**GPL-3.0**](./LICENSE), General Public License v3

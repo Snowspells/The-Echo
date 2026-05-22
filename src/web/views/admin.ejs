@@ -1,0 +1,90 @@
+<%- include('partials/header', { title: 'Staff Panel', user }) %>
+
+<div class="admin">
+    <h1>Staff Panel</h1>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Linked Users</h3>
+            <p class="stat-value"><%= stats.totalUsers %></p>
+        </div>
+        <div class="stat-card">
+            <h3>Servers</h3>
+            <p class="stat-value"><%= stats.botGuilds %></p>
+        </div>
+        <div class="stat-card">
+            <h3>Bot Uptime</h3>
+            <p class="stat-value"><%= stats.botUptime %></p>
+        </div>
+    </div>
+
+    <div class="admin-section">
+        <h2>Linked Users</h2>
+        <% if (users.length > 0) { %>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Discord ID</th>
+                            <th>AGID</th>
+                            <th>Marks</th>
+                            <th>Inventory Items</th>
+                            <th>Linked Since</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% users.forEach(function(u) { %>
+                            <tr>
+                                <td><code><%= u.DID %></code></td>
+                                <td>
+                                    <form method="POST" action="/admin/users/<%= u.DID %>/update" class="inline-form">
+                                        <input type="text" name="agid" value="<%= u.agid %>" class="input-sm">
+                                </td>
+                                <td>
+                                        <input type="number" name="marks" value="<%= u.marks %>" class="input-sm input-number">
+                                </td>
+                                <td><%= Array.isArray(u.inventory) ? u.inventory.length : 0 %></td>
+                                <td><%= u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A' %></td>
+                                <td class="actions-cell">
+                                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                    </form>
+                                    <form method="POST" action="/admin/users/<%= u.DID %>/delete" class="inline-form"
+                                          onsubmit="return confirm('Delete this user?')">
+                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <div class="empty-state">
+                <p>No linked users yet.</p>
+            </div>
+        <% } %>
+    </div>
+
+    <div class="admin-section">
+        <h2>Recent Chat Bridge Messages</h2>
+        <% if (recentMessages.length > 0) { %>
+            <div class="message-log">
+                <% recentMessages.forEach(function(msg) { %>
+                    <div class="message-entry message-<%= msg.source %>">
+                        <span class="message-source">[<%= msg.source === 'discord' ? 'Discord' : 'Game' %>]</span>
+                        <span class="message-author"><%= msg.author_name %></span>
+                        <span class="message-content"><%= msg.content %></span>
+                        <span class="message-time"><%= new Date(msg.timestamp).toLocaleTimeString() %></span>
+                    </div>
+                <% }); %>
+            </div>
+        <% } else { %>
+            <div class="empty-state">
+                <p>No chat bridge messages yet.</p>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<%- include('partials/footer') %>
