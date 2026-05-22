@@ -1,158 +1,89 @@
 # The Echo
 
-A Discord bot and web dashboard for community management, account linking, and cross-platform chat bridging. Built on **discord.js v14** and **Express.js**.
-
 *The Echo Beckons. The Echo Nurtures. The Echo Watches.*
 
-## Features
+**The Echo** is a community management platform for game server communities, combining a Discord bot, a web dashboard, and a cross-platform chat bridge into a single unified system. Built for communities where players interact both in-game and on Discord, The Echo bridges these worlds together.
 
-### Discord Bot
-- Full command handler supporting message commands, slash commands, user/message context menus.
-- Component handling: buttons, select menus, modals, autocomplete.
-- Advanced command options: cooldowns, permission checks, owner/developer restrictions.
-- Per-guild configurable prefix.
-- Account linking system (`/link`, `/adminlink`) to connect Discord users to game accounts (AGID).
-- Staff role management (`/staffrole assign`, `/staffrole remove`, `/staffrole list`) with three tiers: Support, Moderator, Administrator.
+## What It Does
 
-### Web Dashboard
-- **Discord OAuth2 Login** — Sign in with your Discord account.
-- **User Dashboard** — View your linked game account, marks (currency), and inventory.
-- **Staff Admin Panel** — Manage linked users, view bot stats, and monitor the chat bridge. Role-based access with three tiers: Support (read-only), Moderator (edit users), and Administrator (full access). Access is determined by Discord roles configured via the `/staffrole` command.
+- **Links Discord accounts to game identities** — Players connect their Discord ID to their in-game account (AGID), enabling cross-platform tracking of currency, inventory, and activity.
+- **Web dashboard** — A companion website where players can view their linked account, stats, and inventory by logging in with Discord.
+- **Staff tools** — A tiered staff system (Support, Moderator, Administrator) driven by Discord roles, with a web admin panel for managing users and monitoring activity.
+- **Chat bridge** — Bidirectional message relay between a Discord channel and the in-game Global chat, so players stay connected whether they're in-game or on Discord.
 
-### Chat Bridge (Discord <-> Game)
-- Bidirectional message relay between a Discord channel and the in-game "Global" chat.
-- **REST API** for the game server to push messages into Discord (`POST /api/bridge/incoming`).
-- **Outbound relay** automatically forwards Discord messages from the bridge channel to the game server via webhook.
-- Message logging with history retrieval.
-- Health check endpoint (`GET /api/bridge/health`).
+## Quick Start
 
-## Dependencies
-- **discord.js** — ^14.25.0
-- **better-sqlite3** — ^9.2.2
-- **express** — ^5.2.1
-- **express-session** — ^1.19.0
-- **ejs** — ^5.0.2
-- **colors** — ^1.4.0
-- **dotenv** — ^16.4.5
-
-> [!NOTE]
-> **Node.js v16.11.0** or newer is required.
-
-## Setup
-
-1. Clone or download this repository.
-2. Install dependencies:
+1. **Clone & install:**
    ```bash
+   git clone https://github.com/Snowspells/The-Echo.git
+   cd The-Echo
    npm install
    ```
 
-3. Copy and configure the required files:
-   - `src/example.config.js` -> `src/config.js` — Handler configuration (prefix, owner ID, developer IDs, etc.)
-   - `.env.example` -> `.env` — Secrets and environment variables.
+2. **Configure:** Copy the example files and fill in your values:
+   - `src/example.config.js` → `src/config.js`
+   - Create a `.env` file (see [Setup & Configuration](wiki/Setup-and-Configuration.md))
 
-4. Fill in your `.env` file with the following values:
-
-   ```env
-   # Discord Bot
-   CLIENT_TOKEN=your_discord_bot_token
-
-   # Discord OAuth2 (for web dashboard)
-   DISCORD_CLIENT_ID=your_discord_app_client_id
-   DISCORD_CLIENT_SECRET=your_discord_app_client_secret
-   WEB_BASE_URL=http://localhost:3000
-   WEB_PORT=3000
-   SESSION_SECRET=a_random_secret_string
-
-   # Staff Roles (guild where staff roles are checked)
-   STAFF_GUILD_ID=your_discord_guild_id
-
-   # Chat Bridge
-   BRIDGE_CHANNEL_ID=discord_channel_id_for_bridge
-   BRIDGE_API_KEY=a_secret_key_for_game_server_api
-   GAME_WEBHOOK_URL=http://your-game-server/api/chat
-   
-   # Logging
-   LOG_LEVEL=info
-   ```
-
-5. Fill in `src/config.js` with your bot owner ID, developer IDs, and other settings.
-
-6. Start the bot:
+3. **Run:**
    ```bash
    npm start
    ```
+   The Discord bot and web dashboard start together.
 
-   The Discord bot and web dashboard will start together. The web dashboard runs on the port specified by `WEB_PORT` (default: 3000).
+## Documentation
 
-> [!CAUTION]
-> Never share your Discord bot token or client secret! Keep them in the `.env` file which is gitignored.
+Full documentation is available in the [wiki](wiki/Home.md):
 
-## Chat Bridge API
+- [Setup & Configuration](wiki/Setup-and-Configuration.md) — Environment variables, config file, and first-run setup.
+- [Commands](wiki/Commands.md) — All Discord bot commands (slash commands, message commands, context menus).
+- [Web Dashboard](wiki/Web-Dashboard.md) — Website layout, pages, and navigation.
+- [Staff System](wiki/Staff-System.md) — Role-based access tiers and how to configure them.
+- [Chat Bridge](wiki/Chat-Bridge.md) — Discord ↔ Game chat relay setup and REST API reference.
+- [Log Levels](LOG_LEVELS.md) — Configuring log verbosity.
 
-The game server communicates with The Echo via a REST API, authenticated with the `BRIDGE_API_KEY` header.
+## Tech Stack
 
-### Send a message from game to Discord
-```
-POST /api/bridge/incoming
-Headers: X-API-Key: your_bridge_api_key
-Body: { "playerName": "PlayerOne", "message": "Hello from the game!", "playerId": "optional-id" }
-```
-
-### Get recent bridge messages
-```
-GET /api/bridge/messages?limit=50
-Headers: X-API-Key: your_bridge_api_key
-```
-
-### Health check
-```
-GET /api/bridge/health
-```
-
-### Get user data
-```
-GET /api/user/:discordId
-Headers: X-API-Key: your_bridge_api_key
-```
+| Component | Technology |
+|-----------|------------|
+| Discord Bot | [discord.js](https://discord.js.org/) v14 |
+| Database | [SQLite](https://www.sqlite.org/) via better-sqlite3 |
+| Web Server | [Express.js](https://expressjs.com/) v5 |
+| Templates | [EJS](https://ejs.co/) |
+| Auth | Discord OAuth2 |
 
 ## Project Structure
+
 ```
 src/
-  index.js                     # Entry point
+  index.js                     # Entry point — starts bot + web server
   config.js                    # Bot configuration (gitignored)
-  client/
-    DiscordBot.js              # Main bot client
-    handler/                   # Command, component, and event handlers
+  client/                      # Discord bot client and handlers
   commands/
-    Developer/                 # Eval, reload commands
-    Information/               # Help command
-    PoT/                       # Account linking commands (link, adminlink)
-    Utility/                   # Ping, setprefix
+    Developer/                 # eval, reload (owner/developer only)
+    Information/               # help
+    PoT/                       # link, adminlink, staffrole
+    Utility/                   # ping, setprefix
   components/                  # Button, modal, select menu, autocomplete handlers
   events/
     Client/                    # Bot ready event
-    ChatBridge/                # Discord -> Game message relay
+    ChatBridge/                # Discord → Game message relay
   structure/                   # Base classes for commands, events, components
   utils/
-    Console.js                 # Logging system with levels
+    Console.js                 # Logging system with configurable levels
     Database.js                # SQLite database manager
   web/
     server.js                  # Express web server
-    middleware/
-      auth.js                  # Authentication & staff authorization
-    routes/
-      auth.js                  # Discord OAuth2 login/callback/logout
-      dashboard.js             # User dashboard
-      admin.js                 # Staff admin panel
-      api.js                   # Chat bridge & user REST API
-    views/                     # EJS templates
-    public/
-      css/style.css            # Dark theme stylesheet
+    middleware/                # Auth & staff access middleware
+    routes/                    # Auth, dashboard, admin, API routes
+    views/                     # EJS templates (dark theme)
+    public/                    # Static assets (CSS)
+wiki/                          # Project documentation
 ```
 
-## Log Levels
+## Contributing
 
-See [LOG_LEVELS.md](./LOG_LEVELS.md) for details on configuring log verbosity.
+Contributions are welcome. Please test your changes before submitting a pull request and follow the existing code style.
 
 ## License
-[**GPL-3.0**](./LICENSE), General Public License v3
+
+[GPL-3.0](./LICENSE)
