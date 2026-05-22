@@ -1,157 +1,109 @@
-# <samp>DiscordJS-V14-Bot-Template</samp> v3
+# The Echo
 
-A Discord bot commands, components and events handler based on **discord.js v14** and fully written in JavaScript.
+*The Echo Beckons. The Echo Nurtures. The Echo Watches.*
 
-Did you like the project? Click on the star button (⭐️) right above your screen, thank you!
+**The Echo** is the community management platform for the **Shattered Echoes Fantasy Semi-Realism** Path of Titans community. It combines a Discord bot, a real-time web dashboard, and a cross-platform chat bridge into a single unified system — keeping the community connected whether members are in-game, on Discord, or browsing the website.
 
-## Features
-- Updated to the latest version of [discord.js v14.x](https://github.com/discordjs/discord.js/releases).
-- Supports all possible type of commands.
-    - Message commands.
-    - Application commands:
-        - Chat Input
-        - User context
-        - Message context
-- Handles components.
-    - Buttons
-    - Select menus
-    - Modals
-    - Autocomplete
-- Easy and simple to use.
-- Advanced command options.
-- Simple Database included (YAML).
+> **Note:** This project is built exclusively for the Shattered Echoes community. There are no plans to generalize or extend it beyond the scope of this community at this time.
 
-## Commands, Components, and Events structure:
-### Message commands:
+## What It Does
 
-[`Partial`](https://www.typescriptlang.org/docs/handbook/utility-types.html#partialtype).<br>
-`Awaitable` means the function might be **async**.
+- **Account Linking** — Players connect their Discord ID to their in-game account (AGID), enabling cross-platform tracking of currency (marks), inventory, and activity.
+- **Real-Time Chat Bridge** — A live chatroom on the website that bridges with Discord and the in-game Global channel, so community members can communicate from anywhere. Messages flow seamlessly between all three platforms in real time via WebSocket.
+- **Ticketing System** — Private support channels in Discord with per-guild configuration, staff claiming, HTML transcript generation on close, and a web interface for browsing tickets and reading transcripts.
+- **Web Dashboard** — A companion website where players can view their linked account, chat with the community, browse tickets, and read transcripts — all behind Discord OAuth2 login.
+- **Staff Moderation Tools** — A tiered staff system (Support, Moderator, Administrator) driven by Discord roles, with web-based moderation: mute/unmute users in chat, delete messages, manage user accounts, and monitor community activity.
+- **Security** — Rate limiting on all endpoints, Helmet security headers, input sanitization (XSS protection), secure session management (httpOnly, SameSite cookies), and role-based access control on all staff operations.
 
-```ts
-new MessageCommand({
-    command: {
-        name: string, // The command name
-        description?: string, // The command description (optional)
-        aliases?: string[], // The command aliases (optional)
-        permissions?: PermissionResolvable[], // The command permissions (optional)
-    },
-    options?: Partial<{
-        cooldown: number, // The command cooldown, in milliseconds
-        botOwner: boolean, // Bot owner can only run it? (true = yes, false = no)
-        guildOwner: boolean, // Guild owner can only run it? (true = yes, false = no)
-        botDevelopers: boolean, // Bot developers can only run it? (true = yes, false = no)
-        nsfw: boolean // The command contains NSFW content? (true = yes, false = no)
-    }>,
-    run: Awaitable<(client: DiscordBot, message: Message, args: string[]) => void> // The main function to execute the command
-});
+## Quick Start
+
+1. **Clone & install:**
+   ```bash
+   git clone https://github.com/Snowspells/The-Echo.git
+   cd The-Echo
+   npm install
+   ```
+
+2. **Configure:** Copy the example files and fill in your values:
+   - `src/example.config.js` → `src/config.js`
+   - Create a `.env` file (see [Setup & Configuration](wiki/Setup-and-Configuration.md))
+
+3. **Run:**
+   ```bash
+   npm start
+   ```
+   The Discord bot, web dashboard, and WebSocket chat server start together.
+
+## Documentation
+
+Full documentation is available in the [wiki](wiki/Home.md):
+
+- [Setup & Configuration](wiki/Setup-and-Configuration.md) — Environment variables, config file, and first-run setup.
+- [Commands](wiki/Commands.md) — All Discord bot commands (slash commands, message commands, context menus).
+- [Web Dashboard](wiki/Web-Dashboard.md) — Website layout, pages, and navigation.
+- [Staff System](wiki/Staff-System.md) — Role-based access tiers and how to configure them.
+- [Ticketing System](wiki/Ticketing-System.md) — Support tickets, transcript saving, and web viewer.
+- [Chat Bridge](wiki/Chat-Bridge.md) — Real-time chat bridge setup, WebSocket protocol, and REST API reference.
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Discord Bot | [discord.js](https://discord.js.org/) v14 |
+| Database | [SQLite](https://www.sqlite.org/) via better-sqlite3 |
+| Web Server | [Express.js](https://expressjs.com/) v5 |
+| Real-Time Chat | [ws](https://github.com/websockets/ws) (WebSocket) |
+| Templates | [EJS](https://ejs.co/) |
+| Auth | Discord OAuth2 |
+| Security | [Helmet](https://helmetjs.github.io/), [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit), [xss](https://github.com/leizongmin/js-xss) |
+
+## Security
+
+Account security is a priority for this project. The following measures are in place:
+
+- **Rate Limiting** — All routes are rate-limited (200 req/15 min general, 15 req/15 min auth, 60 req/min API).
+- **DDoS Protection** — WebSocket connection flood prevention (max 5 connections per IP, 20 connection attempts per minute per IP), per-user chat slowmode (1.5s cooldown), and 10KB message size cap.
+- **Helmet** — Security headers including Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, and more.
+- **XSS Protection** — All user input is sanitized before storage and rendering. Chat messages are filtered through the xss library.
+- **Session Security** — httpOnly cookies, SameSite=Lax, configurable secure flag, 24-hour session expiry, custom cookie name.
+- **Role-Based Access** — Three-tier staff system enforced on both web routes and WebSocket connections. Moderation tools require Moderator level or above.
+- **Request Size Limits** — JSON and URL-encoded body parsing limited to 1MB, WebSocket messages limited to 10KB.
+- **WebSocket Authentication** — WebSocket connections require a valid session. Unauthenticated connections are immediately closed.
+
+## Project Structure
+
 ```
-
-### Application commands (Chat input, User context, Message context):
-
-[`APIApplicationCommand`](https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-structure), [`Partial`](https://www.typescriptlang.org/docs/handbook/utility-types.html#partialtype).<br>
-`Awaitable` means the function might be **async**.
-
-```ts
-new ApplicationCommand({
-    command: APIApplicationCommand,
-    options?: Partial<{
-        cooldown: number, // The command cooldown, in milliseconds
-        botOwner: boolean, // Bot owner can only run it? (true = yes, false = no)
-        guildOwner: boolean, // Guild owner can only run it? (true = yes, false = no)
-        botDevelopers: boolean, // Bot developers can only run it? (true = yes, false = no)
-    }>,
-    run: Awaitable<(client: DiscordBot, interaction: Interaction) => void> // The main function to execute the command
-});
+src/
+  index.js                     # Entry point — starts bot + web server + WebSocket
+  config.js                    # Bot configuration (gitignored)
+  client/                      # Discord bot client and handlers
+  commands/
+    Developer/                 # eval, reload (owner/developer only)
+    Information/               # help
+    PoT/                       # link, adminlink, staffrole
+    Tickets/                   # ticket, ticketsetup
+    Utility/                   # ping, setprefix
+  components/                  # Button, modal, select menu, autocomplete handlers
+  events/
+    Client/                    # Bot ready event
+    ChatBridge/                # Discord → Game → Web message relay
+  structure/                   # Base classes for commands, events, components
+  utils/
+    Console.js                 # Logging system with configurable levels
+    Database.js                # SQLite database manager
+  web/
+    server.js                  # Express + WebSocket server
+    middleware/                # Auth & staff access middleware
+    routes/                    # Auth, dashboard, admin, API, tickets, chat routes
+    views/                     # EJS templates (dark theme)
+    public/                    # Static assets (CSS)
+wiki/                          # Project documentation
 ```
-
-### Components:
-#### Autocomplete:
-
-`Awaitable` means the function might be **async**.
-
-```ts
-new AutocompleteComponent({
-    commandName: string,
-    run: Awaitable<(client: DiscordBot, interaction: AutocompleteInteraction) => void> // The main function to execute the command
-});
-```
-
-#### Buttons, Select Menus, and Modals:
-
-[`Partial`](https://www.typescriptlang.org/docs/handbook/utility-types.html#partialtype).<br>
-`Awaitable` means the function might be **async**.
-
-```ts
-new Component({
-    customId: string,
-    type: 'modal' | 'select' | 'button',
-    options?: Partial<{
-        public: boolean // Other users can use the main interaction author button/select? (true = yes, false = no)
-    }>
-    run: Awaitable<(client: DiscordBot, interaction: Interaction) => void> // The main function to execute the command
-});
-```
-
-### Events:
-
-`Awaitable` means the function might be **async**.<br>
-`K` is a type parameter, extends `keyof ClientEvents`.
-
-```ts
-new Event({
-    event: K,
-    once?: boolean, // The event can only happen once? (true = yes, false = no)
-    run: Awaitable<(client: DiscordBot, ...args: ClientEvents[K]) => void>
-});
-```
-
-## Dependencies
-- **colors** → latest
-- **discord.js** → 14.13.0 or newer
-- **dotenv** → latest
-- **quick-yaml.db** → latest
-
-> [!NOTE]
-> **Node.js v16.11.0** or newer is required to run **discord.js**.
-
-## Setup
-1. Install a code editor ([Visual Studio Code](https://code.visualstudio.com/Download) for an example).
-2. Download this project as a **.zip** file: [Download](https://github.com/TFAGaming/DiscordJS-V14-Bot-Template/archive/refs/heads/main.zip)
-3. Extract the **.zip** file into a normal folder.
-4. Open your code editor, click on **Open Folder**, and select the new created folder.
-5. Rename the following files:
-
-- `src/example.config.js` → `src/config.js`: Used for handler configuration.
-- `.env.example` → `.env`: Used for secrets, like the Discord bot token.
-- `example.database.yml` → `database.yml`: Used as a main file for the database.
-- `example.terminal.log` → `terminal.log`: Used as a clone of terminal (to save previous terminal messages).
-
-6. Fill all the required values in **config.js** and **.env**.
-
-> [!CAUTION]
-> Please remember not to share your Discord bot token! This will give access to attackers to do anything they want with your bot, so please keep the token in a safe place, which is the **.env** file.
-
-7. Initialize a new project: `npm init` (To skip every step, do `npm init -y`).
-8. Install all [required dependencies](#dependencies): `npm install colors discord.js dotenv quick-yaml.db`
-
-9. Run the command `node .` or `npm run start` to start the bot.
-10. Enjoy! The bot should be online.
 
 ## Contributing
-Feel free to fork the repository and submit a new pull request if you wish to contribute to this project.
 
-Before you submit a pull request, ensure you tested it and have no issues. Also, keep the same coding style, which means don't use many unnecessary spaces or tabs.
-
-Thank you to all the people who contributed to **DiscordJS-V14-Bot-Template**!
-
-<img src="https://contrib.rocks/image?repo=TFAGaming/DiscordJS-V14-Bot-Template">
-
-## Support
-Join our Discord server if you have any questions to ask, or if you have a problem with this project, you can go to the [issues section](https://github.com/TFAGaming/DiscordJS-V14-Bot-Template/issues) and submit a new issue.
-
-<a href="https://discord.gg/E6VFACWu5V">
-  <img src="https://discord.com/api/guilds/918611797194465280/widget.png?style=banner3">
-</a>
+Contributions are welcome. Please test your changes before submitting a pull request and follow the existing code style.
 
 ## License
-[**GPL-3.0**](./LICENSE), General Public License v3
+
+[GPL-3.0](./LICENSE)

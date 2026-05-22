@@ -1,0 +1,214 @@
+<%- include('partials/header', { title: 'Staff Panel', user }) %>
+
+<div class="admin">
+    <div class="admin-header">
+        <h1>Staff Panel</h1>
+        <span class="staff-badge staff-level-<%= user.staffLevel %>"><%= user.staffLabel %></span>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Linked Users</h3>
+            <p class="stat-value"><%= stats.totalUsers %></p>
+        </div>
+        <div class="stat-card">
+            <h3>Servers</h3>
+            <p class="stat-value"><%= stats.botGuilds %></p>
+        </div>
+        <div class="stat-card">
+            <h3>Bot Uptime</h3>
+            <p class="stat-value"><%= stats.botUptime %></p>
+        </div>
+    </div>
+
+    <div class="admin-section">
+        <h2>Linked Users</h2>
+        <% if (users.length > 0) { %>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Discord ID</th>
+                            <th>AGID</th>
+                            <th>Marks</th>
+                            <th>Inventory Items</th>
+                            <th>Linked Since</th>
+                            <% if (user.staffLevel >= 2) { %>
+                                <th>Actions</th>
+                            <% } %>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% users.forEach(function(u) { %>
+                            <tr>
+                                <td><code><%= u.DID %></code></td>
+                                <% if (user.staffLevel >= 2) { %>
+                                    <td>
+                                        <form method="POST" action="/admin/users/<%= u.DID %>/update" class="inline-form">
+                                            <input type="text" name="agid" value="<%= u.agid %>" class="input-sm">
+                                    </td>
+                                    <td>
+                                            <input type="number" name="marks" value="<%= u.marks %>" class="input-sm input-number">
+                                    </td>
+                                <% } else { %>
+                                    <td><%= u.agid %></td>
+                                    <td><%= u.marks %></td>
+                                <% } %>
+                                <td><%= Array.isArray(u.inventory) ? u.inventory.length : 0 %></td>
+                                <td><%= u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A' %></td>
+                                <% if (user.staffLevel >= 2) { %>
+                                    <td class="actions-cell">
+                                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                        </form>
+                                        <% if (user.staffLevel >= 3) { %>
+                                            <form method="POST" action="/admin/users/<%= u.DID %>/delete" class="inline-form"
+                                                  onsubmit="return confirm('Delete this user?')">
+                                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                            </form>
+                                        <% } %>
+                                    </td>
+                                <% } %>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <div class="empty-state">
+                <p>No linked users yet.</p>
+            </div>
+        <% } %>
+    </div>
+
+    <div class="admin-section">
+        <h2>Staff Roles Configuration</h2>
+        <% if (staffRoles.length > 0) { %>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Role ID</th>
+                            <th>Level</th>
+                            <th>Guild ID</th>
+                            <th>Configured</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% staffRoles.forEach(function(role) { %>
+                            <tr>
+                                <td><code><%= role.role_id %></code></td>
+                                <td><span class="staff-badge staff-level-<%= role.level %>"><%= role.label %></span></td>
+                                <td><code><%= role.guild_id %></code></td>
+                                <td><%= role.created_at ? new Date(role.created_at).toLocaleDateString() : 'N/A' %></td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <div class="empty-state">
+                <p>No staff roles configured. Use the <code>/staffrole assign</code> command in Discord to set up role-based access.</p>
+            </div>
+        <% } %>
+    </div>
+
+    <div class="admin-section">
+        <h2>Access Levels Reference</h2>
+        <div class="access-levels">
+            <div class="access-level-card">
+                <span class="staff-badge staff-level-1">Support</span>
+                <p>View staff panel, linked users, and chat bridge logs (read-only).</p>
+            </div>
+            <div class="access-level-card">
+                <span class="staff-badge staff-level-2">Moderator</span>
+                <p>Everything in Support, plus edit user data (AGID, marks).</p>
+            </div>
+            <div class="access-level-card">
+                <span class="staff-badge staff-level-3">Administrator</span>
+                <p>Full access, including deleting users and managing staff roles.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-section">
+        <h2>Tickets Overview</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Tickets</h3>
+                <p class="stat-value"><%= ticketStats.total %></p>
+            </div>
+            <div class="stat-card">
+                <h3>Open</h3>
+                <p class="stat-value" style="color: #57f287;"><%= ticketStats.open %></p>
+            </div>
+            <div class="stat-card">
+                <h3>Closed</h3>
+                <p class="stat-value"><%= ticketStats.closed %></p>
+            </div>
+        </div>
+        <% if (recentTickets.length > 0) { %>
+            <h3 style="margin-top: 1rem;">Recent Tickets</h3>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Subject</th>
+                            <th>Creator</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Transcript</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% recentTickets.forEach(function(ticket) { %>
+                            <tr>
+                                <td><code>#<%= ticket.id %></code></td>
+                                <td><%= ticket.subject %></td>
+                                <td><%= ticket.creator_name %></td>
+                                <td>
+                                    <span class="ticket-status ticket-<%= ticket.status %>"><%= ticket.status %></span>
+                                </td>
+                                <td><%= ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : 'N/A' %></td>
+                                <td>
+                                    <% if (ticket.status === 'closed') { %>
+                                        <a href="/tickets/<%= ticket.id %>/transcript" class="btn btn-sm btn-primary">View</a>
+                                    <% } else { %>
+                                        <span class="text-muted">—</span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+            <a href="/tickets" class="btn" style="margin-top: 0.75rem;">View All Tickets &rarr;</a>
+        <% } else { %>
+            <div class="empty-state">
+                <p>No tickets yet. Use the <code>/ticketsetup panel</code> command in Discord to create a ticket panel.</p>
+            </div>
+        <% } %>
+    </div>
+
+    <div class="admin-section">
+        <h2>Recent Chat Bridge Messages</h2>
+        <% if (recentMessages.length > 0) { %>
+            <div class="message-log">
+                <% recentMessages.forEach(function(msg) { %>
+                    <div class="message-entry message-<%= msg.source %>">
+                        <span class="message-source">[<%= msg.source === 'discord' ? 'Discord' : 'Game' %>]</span>
+                        <span class="message-author"><%= msg.author_name %></span>
+                        <span class="message-content"><%= msg.content %></span>
+                        <span class="message-time"><%= new Date(msg.timestamp).toLocaleTimeString() %></span>
+                    </div>
+                <% }); %>
+            </div>
+        <% } else { %>
+            <div class="empty-state">
+                <p>No chat bridge messages yet.</p>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<%- include('partials/footer') %>
