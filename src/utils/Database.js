@@ -802,7 +802,7 @@ class DatabaseManager {
 
     deleteExpiredClientTokens() {
         try {
-            this.db.prepare('DELETE FROM client_tokens WHERE expires_at < datetime(\'now\')').run();
+            this.db.prepare('DELETE FROM client_tokens WHERE expires_at < ?').run(new Date().toISOString());
             this.checkpointWAL();
         } catch (err) {
             const { error } = require('./Console');
