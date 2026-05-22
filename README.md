@@ -44,6 +44,7 @@ Full documentation is available in the [wiki](wiki/Home.md):
 - [Staff System](wiki/Staff-System.md) — Role-based access tiers and how to configure them.
 - [Ticketing System](wiki/Ticketing-System.md) — Support tickets, transcript saving, and web viewer.
 - [Chat Bridge](wiki/Chat-Bridge.md) — Real-time chat bridge setup, WebSocket protocol, and REST API reference.
+- [Standalone Client API](wiki/Standalone-Client-API.md) — Token-based auth, extended WebSocket protocol, and role colors for the standalone chat client.
 
 ## Tech Stack
 
