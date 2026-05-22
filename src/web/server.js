@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const adminRoutes = require('./routes/admin');
 const apiRoutes = require('./routes/api');
+const ticketRoutes = require('./routes/tickets');
 
 class WebServer {
     constructor(client) {
@@ -56,6 +57,7 @@ class WebServer {
         this.app.use('/dashboard', dashboardRoutes);
         this.app.use('/admin', adminRoutes);
         this.app.use('/api', apiRoutes);
+        this.app.use('/tickets', ticketRoutes);
 
         this.app.use((req, res) => {
             res.status(404).render('error', {

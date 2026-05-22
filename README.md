@@ -7,8 +7,9 @@
 ## What It Does
 
 - **Links Discord accounts to game identities** — Players connect their Discord ID to their in-game account (AGID), enabling cross-platform tracking of currency, inventory, and activity.
-- **Web dashboard** — A companion website where players can view their linked account, stats, and inventory by logging in with Discord.
-- **Staff tools** — A tiered staff system (Support, Moderator, Administrator) driven by Discord roles, with a web admin panel for managing users and monitoring activity.
+- **Ticketing system** — Private support channels in Discord with per-guild configuration, staff claiming, HTML transcript generation on close, and a web interface for browsing tickets and reading transcripts.
+- **Web dashboard** — A companion website where players can view their linked account, browse tickets, and read transcripts by logging in with Discord.
+- **Staff tools** — A tiered staff system (Support, Moderator, Administrator) driven by Discord roles, with a web admin panel for managing users, tickets, and monitoring activity.
 - **Chat bridge** — Bidirectional message relay between a Discord channel and the in-game Global chat, so players stay connected whether they're in-game or on Discord.
 
 ## Quick Start
@@ -38,6 +39,7 @@ Full documentation is available in the [wiki](wiki/Home.md):
 - [Commands](wiki/Commands.md) — All Discord bot commands (slash commands, message commands, context menus).
 - [Web Dashboard](wiki/Web-Dashboard.md) — Website layout, pages, and navigation.
 - [Staff System](wiki/Staff-System.md) — Role-based access tiers and how to configure them.
+- [Ticketing System](wiki/Ticketing-System.md) — Support tickets, transcript saving, and web viewer.
 - [Chat Bridge](wiki/Chat-Bridge.md) — Discord ↔ Game chat relay setup and REST API reference.
 - [Log Levels](LOG_LEVELS.md) — Configuring log verbosity.
 
@@ -62,6 +64,7 @@ src/
     Developer/                 # eval, reload (owner/developer only)
     Information/               # help
     PoT/                       # link, adminlink, staffrole
+    Tickets/                   # ticket, ticketsetup
     Utility/                   # ping, setprefix
   components/                  # Button, modal, select menu, autocomplete handlers
   events/

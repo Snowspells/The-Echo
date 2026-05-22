@@ -131,6 +131,66 @@
     </div>
 
     <div class="admin-section">
+        <h2>Tickets Overview</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Tickets</h3>
+                <p class="stat-value"><%= ticketStats.total %></p>
+            </div>
+            <div class="stat-card">
+                <h3>Open</h3>
+                <p class="stat-value" style="color: #57f287;"><%= ticketStats.open %></p>
+            </div>
+            <div class="stat-card">
+                <h3>Closed</h3>
+                <p class="stat-value"><%= ticketStats.closed %></p>
+            </div>
+        </div>
+        <% if (recentTickets.length > 0) { %>
+            <h3 style="margin-top: 1rem;">Recent Tickets</h3>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Subject</th>
+                            <th>Creator</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Transcript</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% recentTickets.forEach(function(ticket) { %>
+                            <tr>
+                                <td><code>#<%= ticket.id %></code></td>
+                                <td><%= ticket.subject %></td>
+                                <td><%= ticket.creator_name %></td>
+                                <td>
+                                    <span class="ticket-status ticket-<%= ticket.status %>"><%= ticket.status %></span>
+                                </td>
+                                <td><%= ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : 'N/A' %></td>
+                                <td>
+                                    <% if (ticket.status === 'closed') { %>
+                                        <a href="/tickets/<%= ticket.id %>/transcript" class="btn btn-sm btn-primary">View</a>
+                                    <% } else { %>
+                                        <span class="text-muted">—</span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+            <a href="/tickets" class="btn" style="margin-top: 0.75rem;">View All Tickets &rarr;</a>
+        <% } else { %>
+            <div class="empty-state">
+                <p>No tickets yet. Use the <code>/ticketsetup panel</code> command in Discord to create a ticket panel.</p>
+            </div>
+        <% } %>
+    </div>
+
+    <div class="admin-section">
         <h2>Recent Chat Bridge Messages</h2>
         <% if (recentMessages.length > 0) { %>
             <div class="message-log">

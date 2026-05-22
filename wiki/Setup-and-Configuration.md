@@ -86,9 +86,11 @@ LOG_LEVEL=info
 ### Bot Permissions
 
 When inviting the bot to your server, ensure it has these permissions:
-- **Send Messages** — Required for chat bridge and command responses
-- **Read Message History** — Required for chat bridge channel
-- **View Channels** — Required to access the bridge channel
+- **Manage Channels** — Required for creating and deleting ticket channels
+- **Send Messages** — Required for chat bridge, command responses, and ticket notifications
+- **Read Message History** — Required for chat bridge channel and ticket transcript generation
+- **View Channels** — Required to access the bridge channel and ticket channels
+- **Embed Links** — Required for ticket panel embeds and log messages
 
 ### OAuth2 Configuration
 

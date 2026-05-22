@@ -10,12 +10,18 @@ router.get('/', requireStaff(STAFF_LEVELS.SUPPORT), (req, res) => {
     const recentMessages = req.db.getRecentBridgeMessages(25);
     const botGuilds = req.discordClient.guilds.cache.size;
     const staffRoles = req.db.getAllStaffRoles();
+    const recentTickets = req.db.getAllTickets(10);
+    const ticketStats = process.env.STAFF_GUILD_ID
+        ? req.db.getTicketStats(process.env.STAFF_GUILD_ID)
+        : { total: 0, open: 0, closed: 0 };
 
     res.render('admin', {
         user: req.session.user,
         users,
         recentMessages,
         staffRoles,
+        recentTickets,
+        ticketStats,
         staffLabels: DatabaseManager.STAFF_LABELS,
         stats: {
             totalUsers: users.length,

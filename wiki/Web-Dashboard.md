@@ -99,6 +99,34 @@ Table columns: Discord ID, AGID, Marks, Inventory Items count, Linked Since date
 
 ---
 
+### Tickets (`/tickets`)
+
+*Requires login.*
+
+Lists tickets visible to the current user.
+
+- **Staff** see all tickets across all guilds
+- **Regular users** see only tickets they created
+- **Filter buttons:** All, Open, Closed
+- **Table columns:** ID, Subject, Created By, Status, Claimed By, Created date, Closed date, Transcript link
+
+Clicking **View** on a closed ticket opens the transcript detail page.
+
+---
+
+### Ticket Detail (`/tickets/:id/transcript`)
+
+*Requires login. Must be the ticket creator or have staff access.*
+
+Shows full details for a single ticket:
+
+- **Info grid:** Subject, Created By, Created date, Claimed By, Closed By
+- **Transcript viewer:** Embedded iframe displaying the saved HTML transcript
+- **"Open Full Transcript"** button opens the raw transcript HTML in a new tab
+- **Back link** returns to the ticket list
+
+---
+
 ### Error Page
 
 Displayed when:
@@ -119,6 +147,7 @@ The navigation bar appears on every page and includes:
 | **The Echo** (brand) | Always | Links to the home page |
 | **Home** | Always | Links to `/` |
 | **Dashboard** | Logged in | Links to `/dashboard` |
+| **Tickets** | Logged in | Links to `/tickets` — view your tickets or all tickets (staff) |
 | **Staff Panel** | Staff only | Links to `/admin` (only shown if the user has a staff level) |
 | **Staff Badge** | Staff only | Color-coded badge showing the user's tier (e.g. "Moderator") |
 | **Avatar + Username** | Logged in | Shows the user's Discord avatar and username |

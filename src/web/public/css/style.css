@@ -545,6 +545,105 @@ code {
     margin-top: 0.5rem;
 }
 
+/* ===== Tickets ===== */
+.tickets-page,
+.ticket-detail {
+    padding-bottom: 2rem;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.page-header h1 {
+    margin-bottom: 0;
+}
+
+.filter-bar {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.ticket-status {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.ticket-open {
+    background: rgba(87, 242, 135, 0.2);
+    color: #57f287;
+    border: 1px solid rgba(87, 242, 135, 0.3);
+}
+
+.ticket-closed {
+    background: rgba(114, 118, 125, 0.2);
+    color: #72767d;
+    border: 1px solid rgba(114, 118, 125, 0.3);
+}
+
+.user-tag {
+    font-weight: 600;
+}
+
+.text-muted {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.ticket-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-value-sm {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+.transcript-section {
+    margin-top: 1.5rem;
+}
+
+.transcript-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.transcript-header h2 {
+    margin-bottom: 0;
+}
+
+.transcript-embed {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.transcript-embed iframe {
+    display: block;
+    min-height: 500px;
+}
+
+.back-link {
+    margin-top: 1.5rem;
+}
+
 /* ===== Footer ===== */
 .footer {
     text-align: center;

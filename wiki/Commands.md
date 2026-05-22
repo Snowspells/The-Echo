@@ -59,6 +59,26 @@ See [Staff System](Staff-System.md) for full details on how role-based access wo
 
 ---
 
+### Ticketing
+
+| Command | Description | Access |
+|---------|-------------|--------|
+| `/ticket create [subject]` | Creates a new private ticket channel | Everyone |
+| `/ticket close [reason]` | Closes the ticket, saves transcript, and deletes the channel | Ticket creator / Staff |
+| `/ticket add <user>` | Adds a user to the ticket channel | Ticket creator / Staff |
+| `/ticket remove <user>` | Removes a user from the ticket channel | Ticket creator / Staff |
+| `/ticket claim` | Claims the ticket as assigned staff | Staff only |
+| `/ticketsetup category <channel>` | Sets the category for new ticket channels | Administrator |
+| `/ticketsetup log-channel <channel>` | Sets the log channel for ticket events | Administrator |
+| `/ticketsetup support-role <role>` | Sets the role with automatic ticket access | Administrator |
+| `/ticketsetup welcome-message <message>` | Sets the ticket welcome message | Administrator |
+| `/ticketsetup panel [title] [description]` | Sends a ticket creation panel with button | Administrator |
+| `/ticketsetup view` | Shows current ticket configuration and stats | Administrator |
+
+See [Ticketing System](Ticketing-System.md) for full setup guide and transcript details.
+
+---
+
 ### Utility
 
 | Command | Description | Access |
@@ -113,7 +133,8 @@ Right-click (or long-press on mobile) a user or message to access these commands
 
 | Level | Who | Commands |
 |-------|-----|----------|
-| **Everyone** | All server members | `/link`, `/ping`, `/help`, `ping`, `help`, `setprefix`, context menus |
+| **Everyone** | All server members | `/link`, `/ticket create`, `/ping`, `/help`, `ping`, `help`, `setprefix`, context menus |
+| **Server Admin** | Members with Administrator permission | `/ticketsetup` (all subcommands) |
 | **Developers** | Users listed in `config.users.developers` | `/adminlink`, `/reload`, `/components`, `/show-modal`, `/autocomplete`, `reload` |
 | **Bot Owner** | The user ID in `config.users.ownerId` | `/eval`, `/staffrole`, `eval`, plus everything above |
 

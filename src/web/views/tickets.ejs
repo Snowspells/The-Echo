@@ -1,0 +1,64 @@
+<%- include('partials/header', { title: 'Tickets', user }) %>
+
+<div class="tickets-page">
+    <div class="page-header">
+        <h1><%= isStaff ? 'All Tickets' : 'My Tickets' %></h1>
+        <div class="filter-bar">
+            <a href="/tickets" class="btn btn-sm <%= !currentFilter ? 'btn-primary' : '' %>">All</a>
+            <a href="/tickets?status=open" class="btn btn-sm <%= currentFilter === 'open' ? 'btn-primary' : '' %>">Open</a>
+            <a href="/tickets?status=closed" class="btn btn-sm <%= currentFilter === 'closed' ? 'btn-primary' : '' %>">Closed</a>
+        </div>
+    </div>
+
+    <% if (tickets.length > 0) { %>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Subject</th>
+                        <th>Created By</th>
+                        <th>Status</th>
+                        <th>Claimed By</th>
+                        <th>Created</th>
+                        <th>Closed</th>
+                        <th>Transcript</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% tickets.forEach(function(ticket) { %>
+                        <tr>
+                            <td><code>#<%= ticket.id %></code></td>
+                            <td><%= ticket.subject %></td>
+                            <td>
+                                <span class="user-tag"><%= ticket.creator_name %></span>
+                                <br><code class="text-muted"><%= ticket.creator_id %></code>
+                            </td>
+                            <td>
+                                <span class="ticket-status ticket-<%= ticket.status %>">
+                                    <%= ticket.status %>
+                                </span>
+                            </td>
+                            <td><%= ticket.claimed_by_name || '—' %></td>
+                            <td><%= ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : 'N/A' %></td>
+                            <td><%= ticket.closed_at ? new Date(ticket.closed_at).toLocaleDateString() : '—' %></td>
+                            <td>
+                                <% if (ticket.status === 'closed') { %>
+                                    <a href="/tickets/<%= ticket.id %>/transcript" class="btn btn-sm btn-primary">View</a>
+                                <% } else { %>
+                                    <span class="text-muted">—</span>
+                                <% } %>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    <% } else { %>
+        <div class="empty-state">
+            <p>No tickets found<%= currentFilter ? ` with status "${currentFilter}"` : '' %>.</p>
+        </div>
+    <% } %>
+</div>
+
+<%- include('partials/footer') %>

@@ -27,7 +27,18 @@ class ComponentsListener {
                 if (interaction.isButton()) {
                     const component = client.collection.components.buttons.get(interaction.customId);
 
-                    if (!component) return;
+                    if (!component) {
+                        // Handle dynamic ticket close buttons (ticket-close-{id})
+                        if (interaction.customId.startsWith('ticket-close-')) {
+                            try {
+                                const ticketCloseHandler = require('../../components/Button/ticket-close-handler');
+                                ticketCloseHandler.run(client, interaction);
+                            } catch (err) {
+                                error(err);
+                            }
+                        }
+                        return;
+                    }
 
                     if (!(await checkUserPermissions(component))) return;
 
