@@ -9,8 +9,11 @@ The standalone client uses **token-based authentication** instead of browser ses
 1. Client requests a login URL from the server
 2. Server returns a Discord OAuth2 authorization URL
 3. User authenticates in their browser
-4. Server issues a long-lived client token (30 days)
-5. Client stores the token securely and uses it for all subsequent requests
+4. Server issues a short-lived, single-use **code** (valid 5 minutes) and returns it via the `echochat://auth?code=<code>` deep link
+5. Client exchanges the code for a long-lived client token (30 days) via `POST /auth/client/exchange`
+6. Client stores the token securely and uses it for all subsequent requests
+
+The one-time code keeps the long-lived token out of the browser URL/history; the token itself is only ever transmitted in the exchange response body.
 
 ### Endpoints
 
@@ -28,7 +31,31 @@ GET /auth/client/login
 }
 ```
 
-The client opens `auth_url` in the system browser. After Discord authorization, the user is redirected to `/auth/client/callback`, which issues a token and attempts to redirect back to the app via the `echochat://auth?token=<token>` deep link.
+The client opens `auth_url` in the system browser. After Discord authorization, the user is redirected to `/auth/client/callback`, which issues a one-time code and attempts to redirect back to the app via the `echochat://auth?code=<code>` deep link. If the deep link does not open the app, the page displays the code for manual entry.
+
+---
+
+#### Exchange Code for Token
+
+```http
+POST /auth/client/exchange
+```
+
+**Body:**
+```json
+{
+    "code": "<one_time_code>"
+}
+```
+
+**Response (200):**
+```json
+{
+    "token": "<client_token>"
+}
+```
+
+Codes are single-use and expire after 5 minutes. After obtaining the token, validate it with `POST /auth/client/validate` to fetch the user profile and role colors.
 
 ---
 
@@ -216,7 +243,9 @@ Default colors are seeded on first run. To change a role's color, update the dat
 
 - Client tokens are 48-byte random hex strings (384 bits of entropy)
 - Tokens expire after 30 days
-- Tokens are stored in the `client_tokens` database table
-- Expired tokens are automatically cleaned up
+- Tokens are stored **hashed (SHA-256)** in the `client_tokens` database table, so a database leak does not expose usable credentials
+- Stored Discord OAuth tokens (`access_token`/`refresh_token`) are encrypted at rest with AES-256-GCM using a key derived from `SESSION_SECRET` (or `TOKEN_ENCRYPTION_KEY`)
+- The browser only ever receives a short-lived single-use code (5 min), never the long-lived token
+- Expired tokens, OAuth states, and one-time codes are purged on a background interval (every 10 minutes)
 - All moderation actions require the same staff level as the web dashboard
 - WebSocket connections via token have the same rate limiting and DDoS protection as session-based connections

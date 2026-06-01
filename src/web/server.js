@@ -8,6 +8,7 @@ const { WebSocketServer } = require('ws');
 const http = require('http');
 const xss = require('xss');
 const { info, error, success, debug } = require('../utils/Console');
+const DatabaseManager = require('../utils/Database');
 
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
@@ -204,9 +205,9 @@ class WebServer {
                     const linkedUser = this.client.database.getUserByDiscordId(user.id);
                     const roleColor = this.client.database.getRoleColor(user.staffLevel || 0);
                     const isOwner = this.isOwnerUser(user.id);
-                    const effectiveLevel = isOwner ? 4 : (user.staffLevel || 0);
+                    const effectiveLevel = isOwner ? DatabaseManager.STAFF_LEVELS.OWNER : (user.staffLevel || 0);
                     const effectiveLabel = isOwner ? 'Owner' : (user.staffLabel || 'Member');
-                    const effectiveColor = isOwner ? (this.client.database.getRoleColor(4)?.color || '#f0883e') : (roleColor?.color || '#8b949e');
+                    const effectiveColor = isOwner ? (this.client.database.getRoleColor(DatabaseManager.STAFF_LEVELS.OWNER)?.color || '#f0883e') : (roleColor?.color || '#8b949e');
 
                     const enrichedUser = {
                         ...user,
@@ -298,7 +299,7 @@ class WebServer {
 
         const linkedUser = this.client.database.getUserByDiscordId(tokenData.discord_id);
         const isOwner = this.isOwnerUser(tokenData.discord_id);
-        const effectiveLevel = isOwner ? 4 : (tokenData.staff_level || 0);
+        const effectiveLevel = isOwner ? DatabaseManager.STAFF_LEVELS.OWNER : (tokenData.staff_level || 0);
         const effectiveLabel = isOwner ? 'Owner' : (tokenData.staff_label || 'Member');
         const roleColor = this.client.database.getRoleColor(effectiveLevel);
 
@@ -474,12 +475,32 @@ class WebServer {
         return new Promise((resolve) => {
             this.httpServer.listen(this.port, () => {
                 success(`Web dashboard running at http://localhost:${this.port}`);
+                this.startTokenCleanup();
                 resolve();
             });
         });
     }
 
+    startTokenCleanup() {
+        const runCleanup = () => {
+            try {
+                this.client.database.deleteExpiredClientTokens();
+                this.client.database.deleteExpiredOAuthStates();
+                this.client.database.deleteExpiredAuthCodes();
+            } catch (err) {
+                debug(`Token cleanup error: ${err.message}`);
+            }
+        };
+        runCleanup();
+        // Purge expired client tokens, OAuth states, and one-time codes every 10 minutes
+        this.cleanupInterval = setInterval(runCleanup, 10 * 60 * 1000);
+    }
+
     stop() {
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+            this.cleanupInterval = null;
+        }
         if (this.httpServer) {
             this.wss?.close();
             this.httpServer.close();

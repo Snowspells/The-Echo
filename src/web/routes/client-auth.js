@@ -37,6 +37,21 @@ router.get('/login', (req, res) => {
     });
 });
 
+// Exchange a short-lived one-time code (from the OAuth2 callback) for a client token
+router.post('/exchange', (req, res) => {
+    const code = req.body?.code;
+    if (!code) {
+        return res.status(400).json({ error: 'Missing code.' });
+    }
+
+    const token = req.db.consumeAuthCode(code);
+    if (!token) {
+        return res.status(400).json({ error: 'Invalid or expired code.' });
+    }
+
+    res.json({ token });
+});
+
 // OAuth2 callback — exchanges code for a client token
 router.get('/callback', async (req, res) => {
     const { code, state } = req.query;
@@ -131,8 +146,12 @@ router.get('/callback', async (req, res) => {
 
         info(`Client token issued for ${discordUser.username} (${discordUser.id})`);
 
-        // Return HTML page that sends token back to the app via deep link
-        const roleColors = req.db.getAllRoleColors();
+        // Issue a short-lived, single-use code instead of exposing the long-lived
+        // token in the browser URL/history. The client exchanges it via /exchange.
+        const oneTimeCode = crypto.randomBytes(24).toString('hex');
+        req.db.createAuthCode(oneTimeCode, clientToken);
+
+        // Return HTML page that sends the code back to the app via deep link
         res.send(`
             <!DOCTYPE html>
             <html>
@@ -146,11 +165,11 @@ router.get('/callback', async (req, res) => {
             <p id="status">Redirecting...</p>
             </div>
             <script>
-            const token = '${clientToken}';
-            // Try deep link first, then show manual copy
-            window.location.href = 'echochat://auth?token=' + token;
+            const code = '${oneTimeCode}';
+            // Try deep link first, then show the one-time code for manual entry
+            window.location.href = 'echochat://auth?code=' + code;
             setTimeout(() => {
-                document.getElementById('status').textContent = 'If the app did not open, copy this token: ' + token;
+                document.getElementById('status').textContent = 'If the app did not open, enter this code (valid 5 min): ' + code;
             }, 2000);
             </script>
             </body></html>
