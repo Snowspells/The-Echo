@@ -9,6 +9,8 @@ terminal.log
 
 # SQLite database files (runtime data — should never be committed)
 database.db
+database.db-wal
+database.db-shm
 *.db
 *.sqlite
 *.sqlite3
