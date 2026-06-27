@@ -1,4 +1,4 @@
-const { info, warn, error, debug } = require("../../utils/Console");
+const { warn, error, debug } = require("../../utils/Console");
 const Event = require("../../structure/Event");
 
 module.exports = new Event({
@@ -10,16 +10,34 @@ module.exports = new Event({
         const bridgeChannelId = process.env.BRIDGE_CHANNEL_ID;
         if (!bridgeChannelId || message.channel.id !== bridgeChannelId) return;
 
-        const gameWebhookUrl = process.env.GAME_WEBHOOK_URL;
-        if (!gameWebhookUrl) {
-            debug('Chat bridge: GAME_WEBHOOK_URL not configured, skipping outbound relay');
-            return;
-        }
-
         const displayName = message.member?.displayName || message.author.username;
         const content = message.cleanContent;
 
         if (!content || content.length === 0) return;
+
+        // Always log + relay to connected web clients.
+        client.database.logBridgeMessage('discord', displayName, message.author.id, content);
+        if (client.webServer) {
+            client.webServer.relayMessageToWeb('discord', displayName, message.author.id, content);
+        }
+
+        // Relay into Path of Titans via RCON when configured.
+        if (client.rcon?.isEnabled()) {
+            try {
+                await client.rcon.relayChat('discord', displayName, content);
+                debug(`Bridge (Discord -> Game/RCON): ${displayName}: ${content}`);
+            } catch (err) {
+                warn(`Bridge RCON relay failed: ${err.message}`);
+            }
+            return;
+        }
+
+        // Fallback: legacy HTTP webhook relay (for non-RCON game integrations).
+        const gameWebhookUrl = process.env.GAME_WEBHOOK_URL;
+        if (!gameWebhookUrl) {
+            debug('Chat bridge: no RCON server and GAME_WEBHOOK_URL not configured, skipping outbound relay');
+            return;
+        }
 
         try {
             const response = await fetch(gameWebhookUrl, {
@@ -37,15 +55,9 @@ module.exports = new Event({
             });
 
             if (response.ok) {
-                client.database.logBridgeMessage('discord', displayName, message.author.id, content);
-                debug(`Bridge (Discord -> Game): ${displayName}: ${content}`);
+                debug(`Bridge (Discord -> Game/webhook): ${displayName}: ${content}`);
             } else {
                 warn(`Bridge relay failed (${response.status}): ${displayName}: ${content}`);
-            }
-
-            // Relay to web clients
-            if (client.webServer) {
-                client.webServer.relayMessageToWeb('discord', displayName, message.author.id, content);
             }
         } catch (err) {
             error('Bridge relay error:', err);

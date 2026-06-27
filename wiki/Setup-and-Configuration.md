@@ -59,7 +59,14 @@ STAFF_GUILD_ID=your_discord_server_id
 # ── Chat Bridge ─────────────────────────────────────────
 BRIDGE_CHANNEL_ID=discord_channel_id_for_chat_bridge
 BRIDGE_API_KEY=a_secret_key_shared_with_your_game_server
-GAME_WEBHOOK_URL=http://your-game-server.com/api/chat
+GAME_WEBHOOK_URL=http://your-game-server.com/api/chat   # legacy fallback only
+
+# ── Path of Titans (RCON + server webhook) ──────────────
+RCON_HOST=your.server.ip
+RCON_PORT=7779
+RCON_PASSWORD=your_rcon_password
+GAME_CHAT_CHANNEL_ID=discord_channel_the_pot_webhook_posts_to
+# BRIDGE_RELAY_JOINS=true   # relay join/leave events to the bridge channel
 
 # ── Logging ─────────────────────────────────────────────
 LOG_LEVEL=info
@@ -78,7 +85,9 @@ LOG_LEVEL=info
 | `STAFF_GUILD_ID` | For staff | The Discord guild (server) ID where staff roles are checked during web login |
 | `BRIDGE_CHANNEL_ID` | For bridge | The Discord channel ID that serves as the bridge endpoint |
 | `BRIDGE_API_KEY` | For bridge | Shared secret key for authenticating game server API requests |
-| `GAME_WEBHOOK_URL` | For bridge | URL the bot sends Discord messages to for relay into the game |
+| `GAME_WEBHOOK_URL` | No | Legacy HTTP relay URL, used only when no RCON server is configured |
+| `RCON_HOST` / `RCON_PORT` / `RCON_PASSWORD` | For PoT | Path of Titans RCON connection (see [Path of Titans Integration](Path-of-Titans-Integration.md)) |
+| `GAME_CHAT_CHANNEL_ID` | For PoT inbound | Discord channel the PoT server webhook posts in-game chat/joins to |
 | `LOG_LEVEL` | No | Logging verbosity: `error`, `warn`, `success`, `info`, or `debug` (default: `info`) |
 
 ## 4. Discord Application Setup

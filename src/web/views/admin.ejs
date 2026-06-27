@@ -22,6 +22,135 @@
     </div>
 
     <div class="admin-section">
+        <h2>Path of Titans Server (RCON)</h2>
+        <% if (!rconEnabled) { %>
+            <div class="empty-state">
+                <p>RCON is not configured. Set <code>RCON_HOST</code>, <code>RCON_PORT</code> and <code>RCON_PASSWORD</code> to enable live server controls.</p>
+            </div>
+        <% } else { %>
+            <div class="message-log" style="margin-bottom: 1rem;">
+                <% rconStatus.forEach(function(s) { %>
+                    <div class="message-entry">
+                        <span class="message-source">[<%= s.name %>]</span>
+                        <span class="message-content"><%= s.host %>:<%= s.port %></span>
+                        <span class="message-time"><%= s.connected ? '🟢 connected' : '🔴 disconnected' %></span>
+                    </div>
+                <% }); %>
+            </div>
+
+            <h3>Live Players</h3>
+            <button type="button" class="btn btn-sm btn-primary" onclick="refreshPlayers()">Refresh live list</button>
+            <pre id="rcon-players" class="message-log" style="white-space: pre-wrap; margin-top: 0.5rem;">Click "Refresh live list" to query the server.</pre>
+
+            <% if (user.staffLevel >= 2) { %>
+                <h3 style="margin-top: 1rem;">Announce to Server</h3>
+                <form class="inline-form" onsubmit="return rconAnnounce(event)">
+                    <input type="text" id="announce-message" class="input-sm" placeholder="Message to broadcast in-game" style="min-width: 280px;" required>
+                    <button type="submit" class="btn btn-sm btn-primary">Send</button>
+                </form>
+
+                <h3 style="margin-top: 1rem;">Kick Player</h3>
+                <form class="inline-form" onsubmit="return rconKick(event)">
+                    <input type="text" id="kick-agid" class="input-sm" placeholder="AGID (123-456-789)" required>
+                    <input type="text" id="kick-reason" class="input-sm" placeholder="Reason (optional)">
+                    <button type="submit" class="btn btn-sm btn-danger">Kick</button>
+                </form>
+            <% } %>
+
+            <% if (user.staffLevel >= 3) { %>
+                <h3 style="margin-top: 1rem;">Ban Player</h3>
+                <form class="inline-form" onsubmit="return rconBan(event)">
+                    <input type="text" id="ban-agid" class="input-sm" placeholder="AGID (123-456-789)" required>
+                    <input type="number" id="ban-hours" class="input-sm input-number" placeholder="Hours (0=perm)" value="0">
+                    <input type="text" id="ban-reason" class="input-sm" placeholder="Reason (optional)">
+                    <button type="submit" class="btn btn-sm btn-danger">Ban</button>
+                </form>
+            <% } %>
+
+            <h3 style="margin-top: 1rem;">Recently Seen Players</h3>
+            <% if (recentGamePlayers.length > 0) { %>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Player</th>
+                                <th>AGID</th>
+                                <th>Status</th>
+                                <th>Last Seen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% recentGamePlayers.forEach(function(p) { %>
+                                <tr>
+                                    <td><%= p.player_name || 'Unknown' %></td>
+                                    <td><code><%= p.agid %></code></td>
+                                    <td><%= p.online ? '🟢 online' : 'offline' %></td>
+                                    <td><%= p.last_seen ? new Date(p.last_seen).toLocaleString() : 'N/A' %></td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <div class="empty-state"><p>No in-game players recorded yet.</p></div>
+            <% } %>
+
+            <script>
+                async function refreshPlayers() {
+                    const el = document.getElementById('rcon-players');
+                    el.textContent = 'Querying...';
+                    try {
+                        const r = await fetch('/admin/rcon/players');
+                        const data = await r.json();
+                        el.textContent = r.ok ? (data.players || '(empty)') : ('Error: ' + (data.error || r.status));
+                    } catch (e) {
+                        el.textContent = 'Request failed: ' + e.message;
+                    }
+                }
+                async function postRcon(path, body) {
+                    const r = await fetch(path, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                    const data = await r.json().catch(() => ({}));
+                    if (!r.ok) { alert('Failed: ' + (data.error || r.status)); return false; }
+                    return true;
+                }
+                async function rconAnnounce(e) {
+                    e.preventDefault();
+                    const message = document.getElementById('announce-message').value;
+                    if (await postRcon('/admin/rcon/announce', { message })) {
+                        document.getElementById('announce-message').value = '';
+                        alert('Announcement sent.');
+                    }
+                    return false;
+                }
+                async function rconKick(e) {
+                    e.preventDefault();
+                    const agid = document.getElementById('kick-agid').value;
+                    const reason = document.getElementById('kick-reason').value;
+                    if (await postRcon('/admin/rcon/kick', { agid, reason })) {
+                        alert('Kick sent.');
+                    }
+                    return false;
+                }
+                async function rconBan(e) {
+                    e.preventDefault();
+                    const agid = document.getElementById('ban-agid').value;
+                    const hours = document.getElementById('ban-hours').value;
+                    const reason = document.getElementById('ban-reason').value;
+                    if (!confirm('Ban ' + agid + '?')) return false;
+                    if (await postRcon('/admin/rcon/ban', { agid, hours, reason })) {
+                        alert('Ban sent.');
+                    }
+                    return false;
+                }
+            </script>
+        <% } %>
+    </div>
+
+    <div class="admin-section">
         <h2>Linked Users</h2>
         <% if (users.length > 0) { %>
             <div class="table-wrapper">

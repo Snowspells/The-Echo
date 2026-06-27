@@ -12,13 +12,21 @@ Used by typing `/command` in any channel where the bot is present.
 
 | Command | Description | Access |
 |---------|-------------|--------|
-| `/link` | Links your Discord account to a game identity (AGID). Creates a new database entry with your Discord ID. If you're already linked, you'll be told to contact an admin to overwrite. | Everyone |
+| `/link <agid>` | Links your Discord account to your Path of Titans AGID. With RCON configured, sends a verification code in-game that you confirm with `/linkverify`. | Everyone |
+| `/linkverify <code>` | Finishes linking using the code whispered to you in-game. | Everyone |
 | `/adminlink <user> <agid>` | Creates or overwrites a user's linked AGID. If the user already exists, updates their AGID; otherwise creates a new entry. | Developers only |
 
 #### `/link`
-- **Options:** None
+- **Options:**
+  - `agid` (required) — Your Alderon Games ID, e.g. `123-456-789`
 - **Cooldown:** 5 seconds
-- **Behavior:** Generates a placeholder AGID and creates a database entry. If you're already linked, it will not overwrite — use `/adminlink` or ask staff.
+- **Behavior:** Validates the AGID. If RCON is configured, whispers a one-time code to that AGID in-game and stores a pending verification (run `/linkverify` to confirm). If RCON is not configured, links directly (marked unverified). Will not overwrite an existing link — use `/adminlink`.
+
+#### `/linkverify`
+- **Options:**
+  - `code` (required) — The verification code whispered to you in-game
+- **Cooldown:** 5 seconds
+- **Behavior:** Confirms a pending `/link` request and finalizes the AGID link. Codes expire after 10 minutes.
 
 #### `/adminlink`
 - **Options:**
@@ -26,6 +34,24 @@ Used by typing `/command` in any channel where the bot is present.
   - `agid` (required) — The game account ID to assign
 - **Cooldown:** 5 seconds
 - **Behavior:** If the user already has a linked account, their AGID is updated. Otherwise a new account is created.
+
+---
+
+### Path of Titans (RCON)
+
+Requires RCON to be configured. See **[Path of Titans Integration](Path-of-Titans-Integration.md)**.
+
+| Command | Description | Access |
+|---------|-------------|--------|
+| `/players [server]` | Lists players currently online on the server. | Manage Messages |
+| `/announce <message> [server]` | Broadcasts a server-wide announcement in-game. | Manage Messages |
+| `/server status` | Shows configured RCON servers and connection state. | Administrator |
+| `/server kick <agid> [reason] [server]` | Kicks a player. | Administrator |
+| `/server ban <agid> [hours] [reason] [server]` | Bans a player (`hours=0` = permanent). | Administrator |
+| `/server heal <agid> [server]` | Heals a player. | Administrator |
+| `/server healall [server]` | Heals all players. | Administrator |
+| `/server whisper <agid> <message> [server]` | Sends a private message to a player. | Administrator |
+| `/server teleport <agid> <x> <y> <z> [server]` | Teleports a player to coordinates. | Administrator |
 
 ---
 

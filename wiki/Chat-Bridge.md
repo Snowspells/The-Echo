@@ -257,9 +257,17 @@ No authentication required.
 
 ## Game Server Integration
 
-### What your game server needs to implement
+### Path of Titans (recommended)
 
-To complete the bridge, your game server needs:
+For a Path of Titans dedicated server, use the native **RCON + server webhook**
+integration — see **[Path of Titans Integration](Path-of-Titans-Integration.md)**.
+When RCON is configured, Discord/Web → Game relay goes out over RCON
+automatically (the HTTP paths below are only used as a fallback for custom game
+integrations).
+
+### Legacy HTTP webhook (fallback / custom games)
+
+If your game can run custom code, it may instead use the HTTP bridge:
 
 1. **Send messages to Discord/Web** — When a player sends a message in Global chat, make a `POST` request to `/api/bridge/incoming` with the player's name and message.
 
@@ -274,7 +282,7 @@ To complete the bridge, your game server needs:
 }
 ```
 
-The `source` field will be `"discord"` or `"web"` depending on where the message originated.
+The `source` field will be `"discord"` or `"web"` depending on where the message originated. This path is only used when **no RCON server is configured**.
 
 ---
 
