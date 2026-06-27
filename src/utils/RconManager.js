@@ -41,6 +41,9 @@ class RconManager {
 
         this.commands = {
             announce: process.env.RCON_CMD_ANNOUNCE || 'announce {message}',
+            // Command used to relay Discord/Web chat into the game. Kept separate
+            // from `announce` so chat bridging doesn't render as a banner.
+            chat: process.env.RCON_CMD_CHAT || 'whisperall {message}',
             playerlist: process.env.RCON_CMD_PLAYERLIST || 'getplayerlist',
             kick: process.env.RCON_CMD_KICK || 'kick {agid} {reason}',
             ban: process.env.RCON_CMD_BAN || 'ban {agid} {hours} {reason}',
@@ -217,7 +220,7 @@ class RconManager {
         const message = `[${label}] ${authorName}: ${content}`;
         this.markRelayed(message);
         this.markRelayed(`${authorName}: ${content}`);
-        const command = this.format(this.commands.announce, { message });
+        const command = this.format(this.commands.chat, { message });
         if (serverName) return this.send(serverName, command);
         return this.sendAll(command);
     }

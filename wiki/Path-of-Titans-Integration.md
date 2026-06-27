@@ -86,6 +86,7 @@ placeholders are substituted at send time.
 | Variable | Default |
 |----------|---------|
 | `RCON_CMD_ANNOUNCE` | `announce {message}` |
+| `RCON_CMD_CHAT` | `whisperall {message}` |
 | `RCON_CMD_PLAYERLIST` | `getplayerlist` |
 | `RCON_CMD_KICK` | `kick {agid} {reason}` |
 | `RCON_CMD_BAN` | `ban {agid} {hours} {reason}` |
