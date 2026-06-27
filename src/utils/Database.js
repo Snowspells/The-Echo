@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const crypto = require('crypto');
 
 class DatabaseManager {
     constructor(filePath = './database.db') {
@@ -145,6 +146,112 @@ class DatabaseManager {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // Role colors table (maps staff levels to hex colors, configurable via Discord role IDs)
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS role_colors (
+                level INTEGER PRIMARY KEY,
+                label TEXT NOT NULL,
+                color TEXT NOT NULL DEFAULT '#8b949e',
+                discord_role_id TEXT
+            )
+        `);
+
+        // Seed default role colors if empty
+        const colorCount = this.db.prepare('SELECT COUNT(*) as count FROM role_colors').get().count;
+        if (colorCount === 0) {
+            const defaultColors = [
+                [0, 'Member', '#8b949e', null],
+                [1, 'Support', '#3fb950', null],
+                [2, 'Moderator', '#5865f2', null],
+                [3, 'Administrator', '#da3633', null],
+                [4, 'Owner', '#f0883e', null]
+            ];
+            const insertColor = this.db.prepare(
+                'INSERT INTO role_colors (level, label, color, discord_role_id) VALUES (?, ?, ?, ?)'
+            );
+            for (const [level, label, color, roleId] of defaultColors) {
+                insertColor.run(level, label, color, roleId);
+            }
+        }
+
+        // OAuth2 state tokens (for cross-context CSRF protection in standalone client auth)
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS client_oauth_states (
+                state TEXT PRIMARY KEY,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Client auth tokens table (for standalone client token-based auth)
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS client_tokens (
+                token TEXT PRIMARY KEY,
+                discord_id TEXT NOT NULL,
+                username TEXT NOT NULL,
+                discriminator TEXT,
+                avatar TEXT,
+                is_staff INTEGER DEFAULT 0,
+                staff_level INTEGER DEFAULT 0,
+                staff_label TEXT,
+                roles TEXT DEFAULT '[]',
+                refresh_token TEXT,
+                discord_access_token TEXT,
+                expires_at DATETIME NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // One-time auth codes (short-lived, exchanged by the standalone client for a token)
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS client_auth_codes (
+                code TEXT PRIMARY KEY,
+                token TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        `);
+    }
+
+    // --- Token hashing & at-rest encryption helpers ---
+    // Client tokens are stored as SHA-256 hashes so a database leak does not
+    // expose usable bearer credentials. Discord OAuth tokens are encrypted
+    // with AES-256-GCM using a key derived from SESSION_SECRET.
+    static hashToken(token) {
+        return crypto.createHash('sha256').update(String(token)).digest('hex');
+    }
+
+    _encryptionKey() {
+        const secret = process.env.TOKEN_ENCRYPTION_KEY || process.env.SESSION_SECRET;
+        if (!secret) return null;
+        return crypto.createHash('sha256').update(String(secret)).digest();
+    }
+
+    _encrypt(plain) {
+        if (plain == null) return null;
+        const key = this._encryptionKey();
+        if (!key) return String(plain); // No key configured (e.g. dev/test) — store as-is.
+        const iv = crypto.randomBytes(12);
+        const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+        const enc = Buffer.concat([cipher.update(String(plain), 'utf8'), cipher.final()]);
+        const tag = cipher.getAuthTag();
+        return `enc:v1:${iv.toString('hex')}:${tag.toString('hex')}:${enc.toString('hex')}`;
+    }
+
+    _decrypt(value) {
+        if (value == null) return null;
+        if (typeof value !== 'string' || !value.startsWith('enc:v1:')) return value; // legacy/plaintext
+        const key = this._encryptionKey();
+        if (!key) return null;
+        try {
+            const [, , ivHex, tagHex, dataHex] = value.split(':');
+            const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivHex, 'hex'));
+            decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+            return Buffer.concat([decipher.update(Buffer.from(dataHex, 'hex')), decipher.final()]).toString('utf8');
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error decrypting value:', err);
+            return null;
+        }
     }
 
     // Guild Settings Methods
@@ -275,8 +382,8 @@ class DatabaseManager {
 
     // Staff Role Methods
     // Levels: 1 = Support, 2 = Moderator, 3 = Administrator
-    static STAFF_LEVELS = { SUPPORT: 1, MODERATOR: 2, ADMINISTRATOR: 3 };
-    static STAFF_LABELS = { 1: 'Support', 2: 'Moderator', 3: 'Administrator' };
+    static STAFF_LEVELS = { SUPPORT: 1, MODERATOR: 2, ADMINISTRATOR: 3, OWNER: 4 };
+    static STAFF_LABELS = { 0: 'Member', 1: 'Support', 2: 'Moderator', 3: 'Administrator', 4: 'Owner' };
 
     setStaffRole(roleId, guildId, level) {
         try {
@@ -780,6 +887,191 @@ class DatabaseManager {
         } catch (err) {
             const { error } = require('./Console');
             error('Error deleting link verification:', err);
+        }
+    }
+
+    // Role Color Methods
+    getRoleColor(level) {
+        try {
+            return this.db.prepare('SELECT * FROM role_colors WHERE level = ?').get(level) || null;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting role color:', err);
+            return null;
+        }
+    }
+
+    getAllRoleColors() {
+        try {
+            return this.db.prepare('SELECT * FROM role_colors ORDER BY level DESC').all();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting all role colors:', err);
+            return [];
+        }
+    }
+
+    setRoleColor(level, label, color, discordRoleId) {
+        try {
+            this.db.prepare(
+                'INSERT OR REPLACE INTO role_colors (level, label, color, discord_role_id) VALUES (?, ?, ?, ?)'
+            ).run(level, label, color, discordRoleId || null);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error setting role color:', err);
+        }
+    }
+
+    getRoleColorByDiscordRoleId(roleId) {
+        try {
+            return this.db.prepare('SELECT * FROM role_colors WHERE discord_role_id = ?').get(roleId) || null;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting role color by Discord role ID:', err);
+            return null;
+        }
+    }
+
+    // Client Token Methods (for standalone chat client auth)
+    createClientToken(token, data) {
+        try {
+            this.db.prepare(`
+                INSERT OR REPLACE INTO client_tokens
+                (token, discord_id, username, discriminator, avatar, is_staff, staff_level, staff_label, roles, refresh_token, discord_access_token, expires_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+                DatabaseManager.hashToken(token),
+                data.discord_id,
+                data.username,
+                data.discriminator || null,
+                data.avatar || null,
+                data.is_staff ? 1 : 0,
+                data.staff_level || 0,
+                data.staff_label || null,
+                JSON.stringify(data.roles || []),
+                this._encrypt(data.refresh_token || null),
+                this._encrypt(data.discord_access_token || null),
+                data.expires_at
+            );
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error creating client token:', err);
+        }
+    }
+
+    getClientToken(token) {
+        try {
+            const result = this.db.prepare('SELECT * FROM client_tokens WHERE token = ?').get(DatabaseManager.hashToken(token));
+            if (result) {
+                result.roles = JSON.parse(result.roles || '[]');
+                result.refresh_token = this._decrypt(result.refresh_token);
+                result.discord_access_token = this._decrypt(result.discord_access_token);
+            }
+            return result || null;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting client token:', err);
+            return null;
+        }
+    }
+
+    deleteClientToken(token) {
+        try {
+            this.db.prepare('DELETE FROM client_tokens WHERE token = ?').run(DatabaseManager.hashToken(token));
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error deleting client token:', err);
+        }
+    }
+
+    deleteExpiredClientTokens() {
+        try {
+            this.db.prepare('DELETE FROM client_tokens WHERE expires_at < ?').run(new Date().toISOString());
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error deleting expired client tokens:', err);
+        }
+    }
+
+    // Client OAuth State Methods (CSRF protection for cross-context auth flow)
+    createOAuthState(state) {
+        try {
+            this.db.prepare('INSERT INTO client_oauth_states (state, created_at) VALUES (?, ?)').run(state, new Date().toISOString());
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error creating OAuth state:', err);
+        }
+    }
+
+    consumeOAuthState(state) {
+        try {
+            const row = this.db.prepare('SELECT * FROM client_oauth_states WHERE state = ?').get(state);
+            if (row) {
+                this.db.prepare('DELETE FROM client_oauth_states WHERE state = ?').run(state);
+                this.checkpointWAL();
+                // Reject states older than 10 minutes (created_at stored as ISO string)
+                const created = new Date(row.created_at);
+                if (Date.now() - created.getTime() > 10 * 60 * 1000) return null;
+            }
+            return row || null;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error consuming OAuth state:', err);
+            return null;
+        }
+    }
+
+    deleteExpiredOAuthStates() {
+        try {
+            const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+            this.db.prepare('DELETE FROM client_oauth_states WHERE created_at < ?').run(cutoff);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error deleting expired OAuth states:', err);
+        }
+    }
+
+    // One-Time Auth Code Methods (exchanged by the standalone client for a token)
+    createAuthCode(code, token) {
+        try {
+            this.db.prepare('INSERT INTO client_auth_codes (code, token, created_at) VALUES (?, ?, ?)').run(code, token, new Date().toISOString());
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error creating auth code:', err);
+        }
+    }
+
+    consumeAuthCode(code) {
+        try {
+            const row = this.db.prepare('SELECT * FROM client_auth_codes WHERE code = ?').get(code);
+            if (!row) return null;
+            this.db.prepare('DELETE FROM client_auth_codes WHERE code = ?').run(code);
+            this.checkpointWAL();
+            // Codes are valid for 5 minutes and single-use
+            if (Date.now() - new Date(row.created_at).getTime() > 5 * 60 * 1000) return null;
+            return row.token;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error consuming auth code:', err);
+            return null;
+        }
+    }
+
+    deleteExpiredAuthCodes() {
+        try {
+            const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+            this.db.prepare('DELETE FROM client_auth_codes WHERE created_at < ?').run(cutoff);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error deleting expired auth codes:', err);
         }
     }
 
