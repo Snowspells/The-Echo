@@ -6,3 +6,11 @@ src/config.js
 .env
 database.yml
 terminal.log
+
+# SQLite database files (runtime data — should never be committed)
+database.db
+*.db
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
