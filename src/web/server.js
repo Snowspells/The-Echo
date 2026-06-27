@@ -8,6 +8,7 @@ const { WebSocketServer } = require('ws');
 const http = require('http');
 const xss = require('xss');
 const { info, error, success, debug } = require('../utils/Console');
+const DatabaseManager = require('../utils/Database');
 
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
@@ -15,6 +16,7 @@ const adminRoutes = require('./routes/admin');
 const apiRoutes = require('./routes/api');
 const ticketRoutes = require('./routes/tickets');
 const chatRoutes = require('./routes/chat');
+const clientAuthRoutes = require('./routes/client-auth');
 
 class WebServer {
     constructor(client) {
@@ -125,6 +127,7 @@ class WebServer {
         this.app.use('/api', apiRoutes);
         this.app.use('/tickets', ticketRoutes);
         this.app.use('/chat', chatRoutes);
+        this.app.use('/auth/client', clientAuthRoutes);
 
         this.app.use((req, res) => {
             res.status(404).render('error', {
@@ -181,56 +184,43 @@ class WebServer {
             }
             this.wsConnectionsByIp.set(ip, currentCount + 1);
 
-            // Parse session from upgrade request
-            const mockRes = { on() {}, end() {}, writeHead() {} };
-            this.sessionMiddleware(req, mockRes, () => {
-                const user = req.session?.user;
-                if (!user) {
-                    this.wsConnectionsByIp.set(ip, (this.wsConnectionsByIp.get(ip) || 1) - 1);
-                    ws.close(4001, 'Not authenticated');
-                    return;
-                }
+            // Try token-based auth first (for standalone client)
+            const url = new URL(req.url, 'http://localhost');
+            const bearerToken = url.searchParams.get('token');
 
-                const clientId = crypto.randomBytes(8).toString('hex');
-                this.wsClients.set(clientId, { ws, user, ip });
-                debug(`WebSocket connected: ${user.username} (${clientId}) from ${ip}`);
-
-                // Send recent messages on connect
-                const recentMessages = this.client.database.getRecentBridgeMessages(50);
-                ws.send(JSON.stringify({ type: 'history', messages: recentMessages }));
-
-                // Send online count
-                this.broadcastOnlineCount();
-
-                ws.on('message', (data) => {
-                    // DDoS: Limit incoming message size (10KB)
-                    if (data.length > 10240) {
-                        debug(`WebSocket oversized message from ${user.username}`);
+            if (bearerToken) {
+                this.authenticateWithToken(ws, req, ip, bearerToken);
+            } else {
+                // Fall back to session-based auth (for web browser)
+                const mockRes = { on() {}, end() {}, writeHead() {} };
+                this.sessionMiddleware(req, mockRes, () => {
+                    const user = req.session?.user;
+                    if (!user) {
+                        this.wsConnectionsByIp.set(ip, (this.wsConnectionsByIp.get(ip) || 1) - 1);
+                        ws.close(4001, 'Not authenticated');
                         return;
                     }
-                    try {
-                        const msg = JSON.parse(data.toString());
-                        this.handleChatMessage(clientId, msg);
-                    } catch (err) {
-                        debug(`WebSocket parse error: ${err.message}`);
-                    }
-                });
 
-                ws.on('close', () => {
-                    this.wsClients.delete(clientId);
-                    const ipCount = this.wsConnectionsByIp.get(ip) || 1;
-                    this.wsConnectionsByIp.set(ip, Math.max(0, ipCount - 1));
-                    debug(`WebSocket disconnected: ${user.username} (${clientId})`);
-                    this.broadcastOnlineCount();
-                });
+                    // Look up AGID and role color for session users
+                    const linkedUser = this.client.database.getUserByDiscordId(user.id);
+                    const roleColor = this.client.database.getRoleColor(user.staffLevel || 0);
+                    const isOwner = this.isOwnerUser(user.id);
+                    const effectiveLevel = isOwner ? DatabaseManager.STAFF_LEVELS.OWNER : (user.staffLevel || 0);
+                    const effectiveLabel = isOwner ? 'Owner' : (user.staffLabel || 'Member');
+                    const effectiveColor = isOwner ? (this.client.database.getRoleColor(DatabaseManager.STAFF_LEVELS.OWNER)?.color || '#f0883e') : (roleColor?.color || '#8b949e');
 
-                ws.on('error', (err) => {
-                    debug(`WebSocket error: ${err.message}`);
-                    this.wsClients.delete(clientId);
-                    const ipCount = this.wsConnectionsByIp.get(ip) || 1;
-                    this.wsConnectionsByIp.set(ip, Math.max(0, ipCount - 1));
+                    const enrichedUser = {
+                        ...user,
+                        staffLevel: effectiveLevel,
+                        staffLabel: effectiveLabel,
+                        agid: linkedUser?.agid || null,
+                        roleColor: effectiveColor,
+                        source: 'web'
+                    };
+
+                    this.registerClient(ws, enrichedUser, ip, 'web');
                 });
-            });
+            }
         });
     }
 
@@ -278,13 +268,16 @@ class WebServer {
             // Broadcast to all WS clients
             const broadcastMsg = {
                 type: 'message',
-                source: 'web',
+                source: client.source || 'web',
                 author_name: user.username,
                 author_id: user.id,
                 content: content,
                 timestamp: new Date().toISOString(),
                 isStaff: user.isStaff,
-                staffLevel: user.staffLevel
+                staffLevel: user.staffLevel || 0,
+                staffLabel: user.staffLabel || 'Member',
+                roleColor: user.roleColor || '#8b949e',
+                agid: user.agid || null
             };
             this.broadcastToWebClients(broadcastMsg);
 
@@ -294,6 +287,91 @@ class WebServer {
             // Relay to game
             this.relayToGame(user.username, content, user.id);
         }
+    }
+
+    authenticateWithToken(ws, req, ip, token) {
+        const tokenData = this.client.database.getClientToken(token);
+        if (!tokenData || new Date(tokenData.expires_at) < new Date()) {
+            this.wsConnectionsByIp.set(ip, (this.wsConnectionsByIp.get(ip) || 1) - 1);
+            ws.close(4001, 'Invalid or expired token');
+            return;
+        }
+
+        const linkedUser = this.client.database.getUserByDiscordId(tokenData.discord_id);
+        const isOwner = this.isOwnerUser(tokenData.discord_id);
+        const effectiveLevel = isOwner ? DatabaseManager.STAFF_LEVELS.OWNER : (tokenData.staff_level || 0);
+        const effectiveLabel = isOwner ? 'Owner' : (tokenData.staff_label || 'Member');
+        const roleColor = this.client.database.getRoleColor(effectiveLevel);
+
+        const user = {
+            id: tokenData.discord_id,
+            username: tokenData.username,
+            discriminator: tokenData.discriminator,
+            avatar: tokenData.avatar,
+            isStaff: !!tokenData.is_staff || isOwner,
+            staffLevel: effectiveLevel,
+            staffLabel: effectiveLabel,
+            roles: tokenData.roles,
+            agid: linkedUser?.agid || null,
+            roleColor: roleColor?.color || '#8b949e',
+            source: 'client'
+        };
+
+        this.registerClient(ws, user, ip, 'client');
+    }
+
+    isOwnerUser(userId) {
+        try {
+            const config = require('../config');
+            return userId === config.users.ownerId;
+        } catch {
+            return false;
+        }
+    }
+
+    registerClient(ws, user, ip, source) {
+        const clientId = crypto.randomBytes(8).toString('hex');
+        this.wsClients.set(clientId, { ws, user, ip, source });
+        debug(`WebSocket connected: ${user.username} (${clientId}) from ${ip} via ${source}`);
+
+        // Send recent messages with role colors
+        const recentMessages = this.client.database.getRecentBridgeMessages(50);
+        ws.send(JSON.stringify({ type: 'history', messages: recentMessages }));
+
+        // Send role colors config
+        const roleColors = this.client.database.getAllRoleColors();
+        ws.send(JSON.stringify({ type: 'role_colors', colors: roleColors }));
+
+        // Send online users list and count
+        this.broadcastOnlineUsers();
+
+        ws.on('message', (data) => {
+            if (data.length > 10240) {
+                debug(`WebSocket oversized message from ${user.username}`);
+                return;
+            }
+            try {
+                const msg = JSON.parse(data.toString());
+                this.handleChatMessage(clientId, msg);
+            } catch (err) {
+                debug(`WebSocket parse error: ${err.message}`);
+            }
+        });
+
+        ws.on('close', () => {
+            this.wsClients.delete(clientId);
+            const ipCount = this.wsConnectionsByIp.get(ip) || 1;
+            this.wsConnectionsByIp.set(ip, Math.max(0, ipCount - 1));
+            debug(`WebSocket disconnected: ${user.username} (${clientId})`);
+            this.broadcastOnlineUsers();
+        });
+
+        ws.on('error', (err) => {
+            debug(`WebSocket error: ${err.message}`);
+            this.wsClients.delete(clientId);
+            const ipCount = this.wsConnectionsByIp.get(ip) || 1;
+            this.wsConnectionsByIp.set(ip, Math.max(0, ipCount - 1));
+        });
     }
 
     broadcastToWebClients(msg) {
@@ -313,6 +391,38 @@ class WebServer {
                 client.ws.send(data);
             }
         }
+    }
+
+    broadcastOnlineUsers() {
+        const users = [];
+        const seenIds = new Set();
+        for (const [, client] of this.wsClients) {
+            if (!seenIds.has(client.user.id)) {
+                seenIds.add(client.user.id);
+                users.push({
+                    id: client.user.id,
+                    username: client.user.username,
+                    avatar: client.user.avatar,
+                    staffLevel: client.user.staffLevel || 0,
+                    staffLabel: client.user.staffLabel || 'Member',
+                    roleColor: client.user.roleColor || '#8b949e',
+                    agid: client.user.agid || null,
+                    source: client.source || 'web'
+                });
+            }
+        }
+
+        // Sort by staff level descending (Owner first, Member last)
+        users.sort((a, b) => b.staffLevel - a.staffLevel);
+
+        const data = JSON.stringify({ type: 'online_users', users, count: users.length });
+        for (const [, client] of this.wsClients) {
+            if (client.ws.readyState === 1) {
+                client.ws.send(data);
+            }
+        }
+        // Also broadcast count for legacy web clients
+        this.broadcastOnlineCount();
     }
 
     relayToDiscord(username, content) {
@@ -365,12 +475,32 @@ class WebServer {
         return new Promise((resolve) => {
             this.httpServer.listen(this.port, () => {
                 success(`Web dashboard running at http://localhost:${this.port}`);
+                this.startTokenCleanup();
                 resolve();
             });
         });
     }
 
+    startTokenCleanup() {
+        const runCleanup = () => {
+            try {
+                this.client.database.deleteExpiredClientTokens();
+                this.client.database.deleteExpiredOAuthStates();
+                this.client.database.deleteExpiredAuthCodes();
+            } catch (err) {
+                debug(`Token cleanup error: ${err.message}`);
+            }
+        };
+        runCleanup();
+        // Purge expired client tokens, OAuth states, and one-time codes every 10 minutes
+        this.cleanupInterval = setInterval(runCleanup, 10 * 60 * 1000);
+    }
+
     stop() {
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+            this.cleanupInterval = null;
+        }
         if (this.httpServer) {
             this.wss?.close();
             this.httpServer.close();
