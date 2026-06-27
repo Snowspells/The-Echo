@@ -440,6 +440,14 @@ class WebServer {
     }
 
     relayToGame(username, content, discordId) {
+        // Relay into Path of Titans via RCON when configured.
+        if (this.client.rcon?.isEnabled()) {
+            this.client.rcon.relayChat('web', username, content)
+                .catch(err => debug(`Game RCON relay error: ${err.message}`));
+            return;
+        }
+
+        // Fallback: legacy HTTP webhook relay (for non-RCON game integrations).
         const gameWebhookUrl = process.env.GAME_WEBHOOK_URL;
         if (!gameWebhookUrl) return;
 

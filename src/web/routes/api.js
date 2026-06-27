@@ -3,6 +3,9 @@ const { info, warn, error } = require('../../utils/Console');
 
 const router = express.Router();
 
+// Legacy HTTP inbound relay for custom game servers that can POST. Path of
+// Titans servers cannot host HTTP; their in-game chat is ingested from the
+// server's Discord webhook by src/events/ChatBridge/onGameChat.js instead.
 router.post('/bridge/incoming', (req, res) => {
     const apiKey = req.headers['x-api-key'];
     if (!process.env.BRIDGE_API_KEY || apiKey !== process.env.BRIDGE_API_KEY) {

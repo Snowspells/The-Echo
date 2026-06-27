@@ -124,6 +124,29 @@ class DatabaseManager {
             )
         `);
 
+        // Game players seen in-game (populated from Path of Titans join/chat events)
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS game_players (
+                agid TEXT PRIMARY KEY,
+                player_name TEXT,
+                server_name TEXT,
+                online INTEGER DEFAULT 0,
+                first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Pending Discord <-> AGID link verifications (whisper-code flow)
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS link_verifications (
+                discord_id TEXT PRIMARY KEY,
+                agid TEXT NOT NULL,
+                code TEXT NOT NULL,
+                expires_at DATETIME NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         // Role colors table (maps staff levels to hex colors, configurable via Discord role IDs)
         this.db.exec(`
             CREATE TABLE IF NOT EXISTS role_colors (
@@ -754,6 +777,116 @@ class DatabaseManager {
         } catch (err) {
             const { error } = require('./Console');
             error('Error deleting bridge message:', err);
+        }
+    }
+
+    // User lookup by AGID (Path of Titans Alderon Games ID)
+    getUserByAgid(agid) {
+        try {
+            return this.db.prepare('SELECT * FROM users WHERE agid = ?').get(agid) || null;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting user by AGID:', err);
+            return null;
+        }
+    }
+
+    // Game Player Methods (in-game presence tracked from PoT events)
+    upsertGamePlayer(agid, playerName, serverName, online = 1) {
+        try {
+            this.db.prepare(`
+                INSERT INTO game_players (agid, player_name, server_name, online, last_seen)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(agid) DO UPDATE SET
+                    player_name = excluded.player_name,
+                    server_name = excluded.server_name,
+                    online = excluded.online,
+                    last_seen = CURRENT_TIMESTAMP
+            `).run(agid, playerName || null, serverName || null, online ? 1 : 0);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error upserting game player:', err);
+        }
+    }
+
+    setGamePlayerOnline(agid, online) {
+        try {
+            this.db.prepare(
+                'UPDATE game_players SET online = ?, last_seen = CURRENT_TIMESTAMP WHERE agid = ?'
+            ).run(online ? 1 : 0, agid);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error setting game player online state:', err);
+        }
+    }
+
+    getGamePlayer(agid) {
+        try {
+            return this.db.prepare('SELECT * FROM game_players WHERE agid = ?').get(agid) || null;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting game player:', err);
+            return null;
+        }
+    }
+
+    getRecentGamePlayers(limit = 50) {
+        try {
+            return this.db.prepare(
+                'SELECT * FROM game_players ORDER BY last_seen DESC LIMIT ?'
+            ).all(limit);
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting recent game players:', err);
+            return [];
+        }
+    }
+
+    getOnlineGamePlayers() {
+        try {
+            return this.db.prepare(
+                'SELECT * FROM game_players WHERE online = 1 ORDER BY last_seen DESC'
+            ).all();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting online game players:', err);
+            return [];
+        }
+    }
+
+    // Link Verification Methods (Discord <-> AGID whisper-code flow)
+    createLinkVerification(discordId, agid, code, expiresAt) {
+        try {
+            this.db.prepare(`
+                INSERT OR REPLACE INTO link_verifications (discord_id, agid, code, expires_at)
+                VALUES (?, ?, ?, ?)
+            `).run(discordId, agid, code, expiresAt);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error creating link verification:', err);
+        }
+    }
+
+    getLinkVerification(discordId) {
+        try {
+            return this.db.prepare('SELECT * FROM link_verifications WHERE discord_id = ?').get(discordId) || null;
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error getting link verification:', err);
+            return null;
+        }
+    }
+
+    deleteLinkVerification(discordId) {
+        try {
+            this.db.prepare('DELETE FROM link_verifications WHERE discord_id = ?').run(discordId);
+            this.checkpointWAL();
+        } catch (err) {
+            const { error } = require('./Console');
+            error('Error deleting link verification:', err);
         }
     }
 

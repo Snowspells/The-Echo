@@ -8,7 +8,8 @@
 
 ## What It Does
 
-- **Account Linking** — Players connect their Discord ID to their in-game account (AGID), enabling cross-platform tracking of currency (marks), inventory, and activity.
+- **Account Linking** — Players connect their Discord ID to their in-game account (AGID), with optional in-game verification via RCON whisper, enabling cross-platform tracking of currency (marks), inventory, and activity.
+- **Path of Titans Integration** — Direct RCON control of a Path of Titans dedicated server (announce, kick, ban, heal, teleport) plus ingestion of the server's Discord webhook for in-game chat, join/leave events, and real AGID capture. See [Path of Titans Integration](wiki/Path-of-Titans-Integration.md).
 - **Real-Time Chat Bridge** — A live chatroom on the website that bridges with Discord and the in-game Global channel, so community members can communicate from anywhere. Messages flow seamlessly between all three platforms in real time via WebSocket.
 - **Ticketing System** — Private support channels in Discord with per-guild configuration, staff claiming, HTML transcript generation on close, and a web interface for browsing tickets and reading transcripts.
 - **Web Dashboard** — A companion website where players can view their linked account, chat with the community, browse tickets, and read transcripts — all behind Discord OAuth2 login.
@@ -43,6 +44,7 @@ Full documentation is available in the [wiki](wiki/Home.md):
 - [Web Dashboard](wiki/Web-Dashboard.md) — Website layout, pages, and navigation.
 - [Staff System](wiki/Staff-System.md) — Role-based access tiers and how to configure them.
 - [Ticketing System](wiki/Ticketing-System.md) — Support tickets, transcript saving, and web viewer.
+- [Path of Titans Integration](wiki/Path-of-Titans-Integration.md) — RCON setup, server webhook ingestion, AGID verification, and admin actions.
 - [Chat Bridge](wiki/Chat-Bridge.md) — Real-time chat bridge setup, WebSocket protocol, and REST API reference.
 - [Standalone Client API](wiki/Standalone-Client-API.md) — Token-based auth, extended WebSocket protocol, and role colors for the standalone chat client.
 

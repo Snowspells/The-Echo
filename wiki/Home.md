@@ -20,6 +20,7 @@ Welcome to The Echo wiki. This is the documentation for **The Echo**, the commun
 - **[Ticketing System](Ticketing-System.md)** — Discord ticket channels, transcript generation, web-based transcript viewer, and setup guide.
 
 ### Game Integration
+- **[Path of Titans Integration](Path-of-Titans-Integration.md)** — RCON + server webhook integration: two-way chat, AGID account verification, and admin actions (kick/ban/heal/teleport).
 - **[Chat Bridge](Chat-Bridge.md)** — Real-time chat bridge between Discord, the game, and the website. Includes WebSocket protocol, REST API, and moderation tools.
 
 ---

@@ -2,6 +2,7 @@ const express = require('express');
 const { requireStaff, STAFF_LEVELS } = require('../middleware/auth');
 const { info } = require('../../utils/Console');
 const DatabaseManager = require('../../utils/Database');
+const { normalizeAgid, isValidAgid } = require('../../utils/pot');
 
 const router = express.Router();
 
@@ -15,6 +16,9 @@ router.get('/', requireStaff(STAFF_LEVELS.SUPPORT), (req, res) => {
         ? req.db.getTicketStats(process.env.STAFF_GUILD_ID)
         : { total: 0, open: 0, closed: 0 };
 
+    const rcon = req.discordClient.rcon;
+    const rconEnabled = !!rcon?.isEnabled();
+
     res.render('admin', {
         user: req.session.user,
         users,
@@ -22,6 +26,10 @@ router.get('/', requireStaff(STAFF_LEVELS.SUPPORT), (req, res) => {
         staffRoles,
         recentTickets,
         ticketStats,
+        rconEnabled,
+        rconStatus: rconEnabled ? rcon.status() : [],
+        onlinePlayers: req.db.getOnlineGamePlayers(),
+        recentGamePlayers: req.db.getRecentGamePlayers(25),
         staffLabels: DatabaseManager.STAFF_LABELS,
         stats: {
             totalUsers: users.length,
@@ -29,6 +37,74 @@ router.get('/', requireStaff(STAFF_LEVELS.SUPPORT), (req, res) => {
             botUptime: formatUptime(req.discordClient.uptime)
         }
     });
+});
+
+// ---- Path of Titans RCON actions ---------------------------------------
+
+function rconOrError(req, res) {
+    const rcon = req.discordClient.rcon;
+    if (!rcon?.isEnabled()) {
+        res.status(400).json({ error: 'RCON is not configured.' });
+        return null;
+    }
+    return rcon;
+}
+
+// Live player list (Support+)
+router.get('/rcon/players', requireStaff(STAFF_LEVELS.SUPPORT), async (req, res) => {
+    const rcon = rconOrError(req, res);
+    if (!rcon) return;
+    try {
+        const response = await rcon.getPlayers(req.query.server || null);
+        res.json({ players: response });
+    } catch (err) {
+        res.status(502).json({ error: err.message });
+    }
+});
+
+// Announce (Moderator+)
+router.post('/rcon/announce', requireStaff(STAFF_LEVELS.MODERATOR), async (req, res) => {
+    const rcon = rconOrError(req, res);
+    if (!rcon) return;
+    const { message, server } = req.body;
+    if (!message || !message.trim()) return res.status(400).json({ error: 'Missing message' });
+    try {
+        await rcon.announce(message.trim().slice(0, 300), server || null);
+        info(`Web RCON announce by ${req.session.user.username}: ${message}`);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(502).json({ error: err.message });
+    }
+});
+
+// Kick (Moderator+)
+router.post('/rcon/kick', requireStaff(STAFF_LEVELS.MODERATOR), async (req, res) => {
+    const rcon = rconOrError(req, res);
+    if (!rcon) return;
+    const { agid, reason, server } = req.body;
+    if (!isValidAgid(agid)) return res.status(400).json({ error: 'Invalid AGID' });
+    try {
+        await rcon.kick(normalizeAgid(agid), (reason || '').slice(0, 200), server || null);
+        info(`Web RCON kick by ${req.session.user.username}: ${agid}`);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(502).json({ error: err.message });
+    }
+});
+
+// Ban (Administrator)
+router.post('/rcon/ban', requireStaff(STAFF_LEVELS.ADMINISTRATOR), async (req, res) => {
+    const rcon = rconOrError(req, res);
+    if (!rcon) return;
+    const { agid, hours, reason, server } = req.body;
+    if (!isValidAgid(agid)) return res.status(400).json({ error: 'Invalid AGID' });
+    try {
+        await rcon.ban(normalizeAgid(agid), parseInt(hours, 10) || 0, (reason || '').slice(0, 200), server || null);
+        info(`Web RCON ban by ${req.session.user.username}: ${agid}`);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(502).json({ error: err.message });
+    }
 });
 
 router.post('/users/:id/update', requireStaff(STAFF_LEVELS.MODERATOR), (req, res) => {
